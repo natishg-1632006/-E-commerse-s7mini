@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../store';
 import { clearCart } from '../store/cartSlice';
 import { MainLayout } from '../layouts/MainLayout';
@@ -47,6 +47,17 @@ export const Checkout: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [paymentPending, setPaymentPending] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+
+  const [searchParams] = useSearchParams();
+  const queryOrderId = searchParams.get('orderId');
+
+  const [orderItems, setOrderItems] = useState<any[]>([]);
+  const [orderSubtotal, setOrderSubtotal] = useState<number | null>(null);
+  const [orderTotal, setOrderTotal] = useState<number | null>(null);
+
+  const displayItems = orderItems.length > 0 ? orderItems : items;
+  const displaySubtotal = orderSubtotal !== null ? orderSubtotal : subtotal;
+  const displayTax = orderSubtotal !== null ? orderSubtotal * 0.018 : tax;
 
   // Shipping form fields
   const [fullName, setFullName] = useState('');
@@ -152,12 +163,68 @@ export const Checkout: React.FC = () => {
     });
   };
 
-  // Redirect if cart is empty and we aren't in confirmation screen
+  // Redirect if cart is empty and we aren't in confirmation screen and not recovering/paying for an order
   useEffect(() => {
-    if (items.length === 0 && activeStep !== 4) {
+    if (items.length === 0 && activeStep !== 4 && !orderId && !queryOrderId) {
       navigate('/cart');
     }
-  }, [items, activeStep, navigate]);
+  }, [items, activeStep, navigate, orderId, queryOrderId]);
+
+  // Load existing order details if queryOrderId is present
+  useEffect(() => {
+    const loadQueryOrder = async () => {
+      if (!queryOrderId) return;
+      setIsLoading(true);
+      try {
+        const existingOrder = await orderService.getOrderById(queryOrderId);
+        if (existingOrder) {
+          setOrderId(existingOrder.orderId);
+          setOrderTotal(existingOrder.totalAmount);
+          setOrderSubtotal(existingOrder.subtotal || existingOrder.totalAmount);
+          setOrderItems(existingOrder.items || []);
+          setPaymentPending(true);
+          setActiveStep(3); // Go directly to step 3 (Payment selector/form)
+          
+          const method = String(existingOrder.paymentMethod).toLowerCase();
+          if (method.includes('cod')) setPaymentMethod('cod');
+          else if (method.includes('upi')) setPaymentMethod('upi');
+          else if (method.includes('netbank') || method.includes('net_banking')) setPaymentMethod('netbank');
+          else setPaymentMethod('card');
+
+          if (existingOrder.shippingAddress?.fullName) {
+            setFullName(existingOrder.shippingAddress.fullName);
+          }
+          if (existingOrder.shippingAddress?.phone) {
+            setMobileNumber(existingOrder.shippingAddress.phone);
+          }
+          if (existingOrder.shippingAddress?.address) {
+            const parts = existingOrder.shippingAddress.address.split(', ');
+            if (parts.length > 0) setAddressLine1(parts[0]);
+            if (parts.length > 1) setAddressLine2(parts.slice(1).join(', '));
+          }
+          if (existingOrder.shippingAddress?.city) {
+            setCity(existingOrder.shippingAddress.city);
+          }
+          if (existingOrder.shippingAddress?.state) {
+            setStateName(existingOrder.shippingAddress.state);
+          }
+          if (existingOrder.shippingAddress?.pincode) {
+            setPincode(existingOrder.shippingAddress.pincode);
+          }
+        } else {
+          toast.error('Order not found.');
+          navigate('/orders');
+        }
+      } catch (err) {
+        console.error('Error fetching order for payment recovery:', err);
+        toast.error('Failed to load order details.');
+        navigate('/orders');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadQueryOrder();
+  }, [queryOrderId, navigate]);
 
   // Revalidate coupon on subtotal changes (triggered by cart quantity changes or items removal)
   useEffect(() => {
@@ -305,9 +372,11 @@ export const Checkout: React.FC = () => {
 
   // Calculations
   const couponDiscount = appliedCoupon?.discount || 0;
-  const total = appliedCoupon
-    ? Math.max(0, appliedCoupon.finalAmount + tax + shipping)
-    : Math.max(0, subtotal - discountAmount - couponDiscount + shipping + tax);
+  const total = orderTotal !== null
+    ? orderTotal
+    : (appliedCoupon
+      ? Math.max(0, appliedCoupon.finalAmount + displayTax + shipping)
+      : Math.max(0, displaySubtotal - discountAmount - couponDiscount + shipping + displayTax));
 
   // Validation
   const validateForm = () => {
@@ -339,15 +408,47 @@ export const Checkout: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleContinueToPayment = (e?: React.FormEvent) => {
+  const handleContinueToPayment = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setSubmitted(true);
     if (validateForm()) {
-      setActiveStep(3);
+      setIsLoading(true);
+      try {
+        const shippingAddress = {
+          fullName,
+          phone: mobileNumber,
+          address: `${addressLine1}${addressLine2 ? ', ' : ''}${addressLine2}`,
+          city,
+          state: stateName,
+          pincode: pincode.replace(/\s/g, ''),
+        };
+
+        const order = await orderService.createOrder({
+          email: emailAddress,
+          shippingAddress,
+          paymentMethod: 'Card', // default placeholder, user selects actual method in next step
+          couponCode: appliedCoupon ? appliedCoupon.couponCode : undefined,
+        });
+
+        const createdOrderId = order.orderId;
+        setOrderId(createdOrderId);
+        setOrderTotal(order.totalAmount);
+        setOrderSubtotal(order.subtotal || order.totalAmount);
+        setOrderItems(order.items || []);
+        
+        dispatch(clearCart()); // Clear local cart state immediately upon successful order creation in backend
+        setActiveStep(3);
+      } catch (err: any) {
+        console.error('Error creating order:', err);
+        const backendMsg = err.response?.data?.message || err.response?.data?.error || err.message;
+        toast.error(backendMsg || 'Failed to place order.');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handlePlaceOrder = async () => {
+  const handleExistingOrderPayment = async () => {
     if (paymentMethod === 'card') {
       const cardErrors: Record<string, string> = {};
       if (!cardName.trim()) cardErrors.cardName = 'Name is required';
@@ -361,51 +462,22 @@ export const Checkout: React.FC = () => {
       }
     }
 
-    const shippingAddress = {
-      fullName,
-      phone: mobileNumber,
-      address: `${addressLine1}${addressLine2 ? ', ' : ''}${addressLine2}`,
-      city,
-      state: stateName,
-      pincode: pincode.replace(/\s/g, ''),
-    };
-
-    let mappedMethod = 'Card';
-    if (paymentMethod === 'cod') mappedMethod = 'COD';
-    else if (paymentMethod === 'upi') mappedMethod = 'UPI';
-    else if (paymentMethod === 'netbank') mappedMethod = 'NetBanking';
-
     setIsLoading(true);
     try {
-      const order = await orderService.createOrder({
-        email: emailAddress,
-        shippingAddress,
-        paymentMethod: mappedMethod,
-        couponCode: appliedCoupon ? appliedCoupon.couponCode : undefined,
-      });
+      let mappedMethod = 'Card';
+      if (paymentMethod === 'cod') mappedMethod = 'COD';
+      else if (paymentMethod === 'upi') mappedMethod = 'UPI';
+      else if (paymentMethod === 'netbank') mappedMethod = 'NetBanking';
 
-      const createdOrderId = order.orderId;
-      setOrderId(createdOrderId);
-      dispatch(clearCart()); // Clear local cart state immediately upon successful order creation in backend
-
-      try {
-        await paymentService.createPayment(createdOrderId, mappedMethod);
-        setPaymentPending(false);
-        setActiveStep(4);
-        toast.success('Order placed successfully!');
-      } catch (payErr: any) {
-        console.error('Payment failed during checkout:', payErr);
-        setPaymentPending(true);
-        setActiveStep(4);
-        toast('Order created, but online payment is pending. Please complete your payment.', { icon: '⚠️' });
-      }
+      await paymentService.createPayment(orderId, mappedMethod);
+      setPaymentPending(false);
+      setActiveStep(4);
+      toast.success('Payment completed successfully!');
     } catch (err: any) {
-      console.error('Error placing order:', err);
-      const backendMsg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.errors;
-      const errMsg = Array.isArray(backendMsg)
-        ? backendMsg.join(', ')
-        : (typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : (backendMsg || err.message || 'Failed to place order.'));
-      toast.error(errMsg);
+      console.error('Payment failed for order:', err);
+      setPaymentPending(true);
+      setActiveStep(4);
+      toast('Order created, but online payment is pending. Please complete your payment.', { icon: '⚠️' });
     } finally {
       setIsLoading(false);
     }
@@ -988,7 +1060,7 @@ export const Checkout: React.FC = () => {
 
                 {/* Cart products items listing */}
                 <div className="space-y-4 max-h-[220px] overflow-y-auto pr-1">
-                  {items.map((item) => {
+                  {displayItems.map((item) => {
                     const enriched = enrichCartItem(item);
                     return (
                       <div key={item.id} className="flex items-center justify-between space-x-3.5 text-left border-b border-slate-100/50 pb-3 last:border-b-0 last:pb-0">
@@ -1016,7 +1088,7 @@ export const Checkout: React.FC = () => {
                 <div className="space-y-2.5 pt-3 border-t border-slate-100 text-xs text-left font-bold text-slate-500">
                   <div className="flex justify-between">
                     <span>Subtotal</span>
-                    <Price value={subtotal} className="text-slate-800 font-black" />
+                    <Price value={displaySubtotal} className="text-slate-800 font-black" />
                   </div>
 
                   {appliedCoupon && (
@@ -1045,7 +1117,7 @@ export const Checkout: React.FC = () => {
 
                   <div className="flex justify-between">
                     <span>Estimated Tax</span>
-                    <Price value={tax} className="text-slate-800 font-black" />
+                    <Price value={displayTax} className="text-slate-800 font-black" />
                   </div>
 
                   <div className="flex justify-between text-slate-850 pt-2.5 border-t border-slate-100 font-black">
@@ -1070,9 +1142,9 @@ export const Checkout: React.FC = () => {
                       variant="primary"
                       size="lg"
                       className="w-full rounded-full font-black text-[11px] uppercase tracking-widest h-12 shadow hover:shadow-md cursor-pointer active:scale-98 transition-all flex items-center justify-center"
-                      onClick={handlePlaceOrder}
+                      onClick={handleExistingOrderPayment}
                     >
-                      Place Order
+                      Pay Now
                     </Button>
                   )}
                 </div>

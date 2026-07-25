@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 
 import { getImageUrl } from '../utils/imageHelper';
-import { paymentService } from '../services/payment.service';
 
 const formatDatetime = (isoString?: string) => {
   if (!isoString) return '—';
@@ -91,7 +90,7 @@ export const OrderDetails: React.FC = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  const [isPaying, setIsPaying] = useState(false);
+  const isPaying = false;
 
   const fetchOrderDetails = async () => {
     if (!orderId) return;
@@ -534,32 +533,13 @@ export const OrderDetails: React.FC = () => {
               <div className="text-[10px] text-slate-400 font-semibold">
                 Paid via {order.paymentMethod || 'Card'} • Status: {order.paymentStatus || 'Pending'}
               </div>
-              {String(order.paymentStatus).toUpperCase() !== 'PAID' && String(order.paymentMethod).toUpperCase() !== 'COD' && (
+              {String(order.paymentStatus).toUpperCase() !== 'PAID' && 
+               String(order.orderStatus).toUpperCase() !== 'CANCELLED' && 
+               String(order.orderStatus).toUpperCase() !== 'EXPIRED' && (
                 <button
                   disabled={isPaying}
-                  onClick={async () => {
-                    if (!orderId) return;
-                    setIsPaying(true);
-                    try {
-                      let mappedMethod = 'Card';
-                      const m = String(order.paymentMethod).toUpperCase();
-                      if (m.includes('COD')) mappedMethod = 'COD';
-                      else if (m.includes('UPI') || m.includes('QR')) mappedMethod = 'UPI';
-                      else if (m.includes('BANK') || m.includes('NET_BANKING')) mappedMethod = 'NetBanking';
-
-                      await paymentService.createPayment(orderId, mappedMethod);
-                      toast.success('Payment completed successfully!');
-                      await fetchOrderDetails();
-                    } catch (err: any) {
-                      console.error('Payment retry error:', err);
-                      const backendMsg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.errors;
-                      const errMsg = Array.isArray(backendMsg)
-                        ? backendMsg.join(', ')
-                        : (typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : (backendMsg || err.message || 'Payment failed.'));
-                      toast.error(errMsg);
-                    } finally {
-                      setIsPaying(false);
-                    }
+                  onClick={() => {
+                    if (orderId) navigate(`/checkout?orderId=${orderId}`);
                   }}
                   className="w-full h-10 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow transition-colors cursor-pointer active:scale-98 border-none disabled:opacity-50"
                 >

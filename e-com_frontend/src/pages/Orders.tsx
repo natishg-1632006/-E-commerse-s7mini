@@ -25,7 +25,6 @@ import {
   Tag,
   Loader2
 } from 'lucide-react';
-import { paymentService } from '../services/payment.service';
 
 import ssdImg from '../assets/products/samsung_t7_ssd.jpg';
 import sleeveImg from '../assets/products/laptop_sleeve_leather.jpg';
@@ -68,19 +67,29 @@ const formatDate = (isoString: string) => {
 
 const getTrackingSteps = (status: string, statusHistory: any[]) => {
   const stepsDef = [
-    { label: 'Confirmed', statusKeys: ['CONFIRMED', 'PROCESSING', 'PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED'] },
-    { label: 'Packed', statusKeys: ['PACKED', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED'] },
-    { label: 'Shipped', statusKeys: ['SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED'] },
-    { label: 'Out for Delivery', statusKeys: ['OUT_FOR_DELIVERY', 'DELIVERED', 'COMPLETED'] },
-    { label: 'Completed', statusKeys: ['DELIVERED', 'COMPLETED'] }
+    { label: 'Pending Payment', key: 'PENDING_PAYMENT' },
+    { label: 'Processing', key: 'PROCESSING' },
+    { label: 'Packed', key: 'PACKED' },
+    { label: 'Shipped', key: 'SHIPPED' },
+    { label: 'Out for Delivery', key: 'OUT_FOR_DELIVERY' },
+    { label: 'Completed', key: 'DELIVERED' }
   ];
 
-  const currentUpper = status.toUpperCase();
+  const currentStatusUpper = status.toUpperCase().replace(/ /g, '_');
+  let currentIdx = stepsDef.findIndex(step => 
+    step.key === currentStatusUpper || 
+    (step.key === 'PENDING_PAYMENT' && currentStatusUpper === 'PENDING')
+  );
 
-  return stepsDef.map(step => {
-    const active = step.statusKeys.includes(currentUpper);
-    const histItem = statusHistory.find(h => step.statusKeys.includes(String(h.status).toUpperCase()));
+  const getHistoryItem = (key: string) => {
+    return statusHistory.find((h: any) => String(h.status).toUpperCase() === key);
+  };
+
+  return stepsDef.map((step, idx) => {
+    const histItem = getHistoryItem(step.key);
+    const active = !!histItem || (currentIdx !== -1 && idx <= currentIdx);
     const date = histItem ? formatDate(histItem.timestamp) : (active ? 'Completed' : 'Expected soon');
+
     return {
       label: step.label,
       date,
@@ -156,7 +165,7 @@ export const Orders: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-  const [payingOrderId, setPayingOrderId] = useState<string | null>(null);
+  const payingOrderId = null;
 
   // State Management
   const [searchQuery, setSearchQuery] = useState('');
@@ -210,28 +219,8 @@ export const Orders: React.FC = () => {
     fetchOrders();
   }, [navigate]);
 
-  const handlePayNow = async (orderId: string, paymentMethod: string) => {
-    setPayingOrderId(orderId);
-    try {
-      let mappedMethod = 'Card';
-      const m = String(paymentMethod).toUpperCase();
-      if (m.includes('COD')) mappedMethod = 'COD';
-      else if (m.includes('UPI') || m.includes('QR')) mappedMethod = 'UPI';
-      else if (m.includes('BANK') || m.includes('NET_BANKING')) mappedMethod = 'NetBanking';
-
-      await paymentService.createPayment(orderId, mappedMethod);
-      toast.success('Payment completed successfully!');
-      await fetchOrders();
-    } catch (err: any) {
-      console.error('Payment retry error:', err);
-      const backendMsg = err.response?.data?.message || err.response?.data?.error || err.response?.data?.errors;
-      const errMsg = Array.isArray(backendMsg)
-        ? backendMsg.join(', ')
-        : (typeof backendMsg === 'object' ? JSON.stringify(backendMsg) : (backendMsg || err.message || 'Payment failed.'));
-      toast.error(errMsg);
-    } finally {
-      setPayingOrderId(null);
-    }
+  const handlePayNow = (orderId: string) => {
+    navigate(`/checkout?orderId=${orderId}`);
   };
 
   // Tab configurations
@@ -725,11 +714,10 @@ export const Orders: React.FC = () => {
                             <div
                               className="absolute top-[13px] left-3 h-[2.5px] bg-blue-600 transition-all duration-500 z-0"
                               style={{
-                                width: `${
-                                  ['Delivered', 'Completed'].includes(order.status)
-                                    ? '100%'
-                                    : '50%'
-                                }`
+                                width: `${(() => {
+                                  const lastActiveIdx = order.trackingSteps.reduce((last: number, step: any, idx: number) => step.active ? idx : last, 0);
+                                  return (lastActiveIdx / (order.trackingSteps.length - 1)) * 100;
+                                })()}%`
                               }}
                             />
 
@@ -847,10 +835,12 @@ export const Orders: React.FC = () => {
                               >
                                 Details
                               </button>
-                              {String(order.paymentStatus).toUpperCase() !== 'PAID' && String(order.paymentMethod).toUpperCase() !== 'COD' && (
+                              {String(order.paymentStatus).toUpperCase() !== 'PAID' && 
+                               String(order.status).toUpperCase() !== 'CANCELLED' && 
+                               String(order.status).toUpperCase() !== 'EXPIRED' && (
                                 <button
                                   disabled={payingOrderId !== null}
-                                  onClick={() => handlePayNow(order.id, order.paymentMethod)}
+                                  onClick={() => handlePayNow(order.id)}
                                   className="h-9 px-6 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black uppercase tracking-wider flex items-center space-x-1.5 shadow transition-colors cursor-pointer active:scale-95 disabled:opacity-50"
                                 >
                                   {payingOrderId === order.id ? (
@@ -1002,10 +992,12 @@ export const Orders: React.FC = () => {
                             >
                               Details
                             </button>
-                            {String(order.paymentStatus).toUpperCase() !== 'PAID' && String(order.paymentMethod).toUpperCase() !== 'COD' && (
+                            {String(order.paymentStatus).toUpperCase() !== 'PAID' && 
+                             String(order.status).toUpperCase() !== 'CANCELLED' && 
+                             String(order.status).toUpperCase() !== 'EXPIRED' && (
                               <button
                                 disabled={payingOrderId !== null}
-                                onClick={() => handlePayNow(order.id, order.paymentMethod)}
+                                onClick={() => handlePayNow(order.id)}
                                 className="flex-grow h-12 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wider flex items-center justify-center space-x-1.5 shadow transition-colors cursor-pointer active:scale-95 border-none disabled:opacity-50"
                               >
                                 {payingOrderId === order.id ? (
