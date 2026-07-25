@@ -1,0 +1,53 @@
+service: wishlist-review-service
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-southeast-1
+  stage: dev
+
+  profile: Natish   # Matches the project AWS SSO profile name
+
+  environment:
+    NODE_ENV: production
+    SERVICE_NAME: ${env:SERVICE_NAME}
+    AWS_REGION: ${env:AWS_REGION}
+    DYNAMODB_WISHLISTS_TABLE: ${env:DYNAMODB_WISHLISTS_TABLE}
+    DYNAMODB_REVIEWS_TABLE: ${env:DYNAMODB_REVIEWS_TABLE}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+    ORDER_SERVICE_URL: ${env:ORDER_SERVICE_URL}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+            - dynamodb:Query
+          Resource:
+            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_WISHLISTS_TABLE}
+            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_WISHLISTS_TABLE}/index/*
+            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_REVIEWS_TABLE}
+            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_REVIEWS_TABLE}/index/*
+
+functions:
+  app:
+    handler: lambda.handler
+    memorySize: 512
+    timeout: 30
+
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+
+      - httpApi:
+          path: /
+          method: ANY

@@ -13,6 +13,7 @@ import Checkout from './pages/Checkout';
 import ProductDetail from './pages/ProductDetail';
 import Orders from './pages/Orders';
 import { OrderDetails } from './pages/OrderDetails';
+import { Wishlist } from './pages/Wishlist';
 import Profile from './pages/Profile';
 import AddressForm from './pages/AddressForm';
 import AdminDashboard from './pages/admin/AdminDashboard';
@@ -95,6 +96,14 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Cart />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wishlist"
+              element={
+                <ProtectedRoute>
+                  <Wishlist />
                 </ProtectedRoute>
               }
             />

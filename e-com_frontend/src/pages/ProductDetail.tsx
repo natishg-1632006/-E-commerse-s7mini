@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../store';
@@ -20,6 +20,8 @@ import {
   Monitor,
   Battery,
   Layers,
+  AlertTriangle,
+  Star,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import toast from 'react-hot-toast';
@@ -31,7 +33,26 @@ import matImg from '../assets/products/premium_desk_mat.jpg';
 import guideImg from '../assets/products/guide.jpg';
 
 import { productService } from '../services/product.service';
+import { wishlistService } from '../services/wishlist.service';
+import { reviewService } from '../services/review.service';
+import { orderService } from '../services/order.service';
 import { getImageUrl } from '../utils/imageHelper';
+
+const decodeJwtSub = (token: string): string | null => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload).sub || null;
+  } catch (e) {
+    return null;
+  }
+};
 
 const formatCategoryName = (name: string) => {
   if (!name) return '';
@@ -51,6 +72,20 @@ export const ProductDetail: React.FC = () => {
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
 
+  const [productReviews, setProductReviews] = useState<any[]>([]);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isEligibleForReview, setIsEligibleForReview] = useState(false);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const averageRating = useMemo(() => {
+    if (productReviews.length === 0) return 5.0;
+    const sum = productReviews.reduce((acc, rev) => acc + rev.rating, 0);
+    return Number((sum / productReviews.length).toFixed(1));
+  }, [productReviews]);
+
   // Retrieve current items from cart to count existing quantity in cart
   const cartItem = useSelector((state: RootState) =>
     state.cart.items.find(
@@ -69,6 +104,34 @@ export const ProductDetail: React.FC = () => {
         const prod = res.data || res;
         setProductData(prod);
         setActiveImageIdx(0);
+
+        // Fetch reviews
+        const reviewsData = await reviewService.getProductReviews(id);
+        setProductReviews(reviewsData);
+
+        // Decode token to check wishlist/eligibility
+        const token = localStorage.getItem('natcart_access_token') || localStorage.getItem('natcart_token');
+        if (token) {
+          const userId = decodeJwtSub(token);
+          if (userId) {
+            // Check wishlist status
+            const wishlisted = await wishlistService.getWishlist(userId);
+            setIsWishlisted(wishlisted.includes(id));
+
+            // Check order service eligibility
+            const userOrders = await orderService.getOrdersByUser(userId);
+            const hasCompletedOrder = userOrders.some((order) => {
+              const isDeliveredOrCompleted =
+                order.orderStatus === 'Delivered' ||
+                order.orderStatus === 'Completed' ||
+                order.orderStatus === 'DELIVERED' ||
+                order.orderStatus === 'COMPLETED';
+              if (!isDeliveredOrCompleted) return false;
+              return order.items.some((item) => item.productId === id);
+            });
+            setIsEligibleForReview(hasCompletedOrder);
+          }
+        }
       } catch (err) {
         console.error('Error fetching product details:', err);
         toast.error('Failed to load product detail logs.');
@@ -138,6 +201,53 @@ export const ProductDetail: React.FC = () => {
     }
   };
 
+  const handleToggleWishlist = async () => {
+    if (!id) return;
+    const token = localStorage.getItem('natcart_access_token') || localStorage.getItem('natcart_token');
+    if (!token) {
+      toast.error('Please login to wishlist items.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      if (isWishlisted) {
+        await wishlistService.removeFromWishlist(id);
+        setIsWishlisted(false);
+        toast.success('Removed from wishlist');
+      } else {
+        await wishlistService.addToWishlist(id);
+        setIsWishlisted(true);
+        toast.success('Added to wishlist');
+      }
+    } catch (err) {
+      toast.error('Failed to update wishlist.');
+    }
+  };
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || isSubmittingReview) return;
+    if (!reviewComment.trim()) {
+      toast.error('Please enter a comment.');
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      const newReview = await reviewService.submitReview(id, reviewRating, reviewComment);
+      setProductReviews((prev) => [newReview, ...prev]);
+      setReviewComment('');
+      setShowReviewForm(false);
+      toast.success('Review submitted successfully!');
+    } catch (err: any) {
+      const backendMsg = err.response?.data?.message || err.message;
+      toast.error(backendMsg || 'Failed to submit review.');
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
+
   const getProductImage = (prod: any) => {
     return getImageUrl(prod);
   };
@@ -171,29 +281,7 @@ export const ProductDetail: React.FC = () => {
     );
   };
 
-  // Mocked client-facing reviews list
-  const reviews = [
-    {
-      id: 'rev-1',
-      author: 'Jason D.',
-      initials: 'JD',
-      rating: 5,
-      verified: true,
-      text: `"The build quality is a beast. Powered through the most demanding professional workloads. Fingerprint-resistant finish is great. Best purchase of the year."`,
-      helpfulCount: 34,
-      date: '2 weeks ago',
-    },
-    {
-      id: 'rev-2',
-      author: 'Sarah L.',
-      initials: 'SL',
-      rating: 5,
-      verified: true,
-      text: `"Upgraded to this unit and difference is night and day. Breathtaking details, and silent cooling. Worth every penny for creative work."`,
-      helpfulCount: 18,
-      date: '1 month ago',
-    }
-  ];
+
 
   if (isLoading) {
     return (
@@ -305,8 +393,10 @@ export const ProductDetail: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black text-blue-650 tracking-widest uppercase">{productData.brand}</span>
                 <div className="bg-blue-50/60 border border-blue-100/50 rounded-full px-3 py-1 flex items-center space-x-1.5">
-                  <Rating value={5} readOnly size="sm" />
-                  <span className="text-[10px] text-blue-700 font-black mt-0.5">5.0 (14 reviews)</span>
+                  <Rating value={Math.round(averageRating)} readOnly size="sm" />
+                  <span className="text-[10px] text-blue-700 font-black mt-0.5">
+                    {averageRating.toFixed(1)} ({productReviews.length} {productReviews.length === 1 ? 'review' : 'reviews'})
+                  </span>
                 </div>
               </div>
               <h1 className="text-xl md:text-2xl font-black text-slate-855 tracking-tight leading-none mt-1">
@@ -320,8 +410,9 @@ export const ProductDetail: React.FC = () => {
                   <span className="text-[10.5px] font-bold text-slate-455">Ships within 24 hours</span>
                 </div>
                 {productData.stock !== undefined && productData.stock > 0 && productData.stock < 5 && (
-                  <p className="text-[10.5px] font-extrabold text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 mt-1 max-w-fit flex items-center space-x-1">
-                    <span>⚠️ Low Stock: Only {productData.stock} units left!</span>
+                  <p className="text-[10.5px] font-extrabold text-amber-600 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1.5 mt-1 max-w-fit flex items-center space-x-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                    <span>Low Stock: Only {productData.stock} units left!</span>
                   </p>
                 )}
               </div>
@@ -364,7 +455,15 @@ export const ProductDetail: React.FC = () => {
                 {productData.stock === 0 ? 'Out of Stock' : 'Buy Now'}
               </button>
 
-              <button className="w-12 h-12 rounded-full border border-slate-200 flex items-center justify-center text-slate-455 hover:text-rose-500 hover:border-rose-200 transition-all cursor-pointer active:scale-90 shadow-sm bg-white">
+              <button
+                onClick={handleToggleWishlist}
+                className={cn(
+                  "w-12 h-12 rounded-full border flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-sm bg-white",
+                  isWishlisted
+                    ? "border-red-200 text-red-500 fill-red-500 hover:text-red-600"
+                    : "border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200"
+                )}
+              >
                 <Heart className="w-5 h-5" />
               </button>
             </div>
@@ -415,53 +514,111 @@ export const ProductDetail: React.FC = () => {
               </>
             )}
           </div>
-        </div>
-
-        {/* Customer Reviews Section */}
+              {/* Customer Reviews Section */}
         <div className="bg-white rounded-[24px] border border-slate-200/60 p-6 md:p-8 shadow-[0_4px_30px_rgba(15,23,42,0.01)] space-y-6">
           <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
             <div className="space-y-1 text-left">
               <h2 className="text-base font-black text-slate-850 tracking-tight">Customer Reviews</h2>
               <p className="text-[11px] text-slate-455 font-bold">Verified feedback from our tech community.</p>
             </div>
-            <button className="h-[34px] px-4 border border-blue-150 hover:bg-blue-50/30 text-blue-650 text-xs font-black rounded-full flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all">
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span>Write a Review</span>
-            </button>
+            {isEligibleForReview && (
+              <button
+                onClick={() => setShowReviewForm(!showReviewForm)}
+                className="h-[34px] px-4 border border-blue-150 hover:bg-blue-50/30 text-blue-650 text-xs font-black rounded-full flex items-center space-x-1.5 cursor-pointer active:scale-95 transition-all bg-white"
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Write a Review</span>
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {reviews.map((rev) => (
-              <div key={rev.id} className="p-5 rounded-2xl border border-slate-150/70 bg-white hover:border-slate-350 hover:shadow-sm transition-all duration-300 text-left space-y-3.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 text-xs font-black">
-                      {rev.initials}
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800">{rev.author}</h4>
-                      {rev.verified && (
-                        <div className="flex items-center space-x-1 mt-0.5">
-                          <Check className="w-3 h-3 text-emerald-600 stroke-[3.5px]" />
-                          <span className="text-[9px] text-emerald-655 font-bold">Verified Buyer</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <Rating value={rev.rating} readOnly size="sm" />
-                </div>
-                <p className="text-xs text-slate-550 leading-relaxed font-sans italic">{rev.text}</p>
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] font-bold text-slate-400">
-                  <button className="flex items-center space-x-1.5 hover:text-slate-700 transition-colors active:scale-90 cursor-pointer">
-                    <ThumbsUp className="w-3.5 h-3.5" />
-                    <span>Helpful ({rev.helpfulCount})</span>
-                  </button>
-                  <span>{rev.date}</span>
+          {/* Add Review Form */}
+          {showReviewForm && (
+            <form onSubmit={handleSubmitReview} className="p-5 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4 animate-fadeIn text-left">
+              <h4 className="text-xs font-black text-slate-800">Write your feedback</h4>
+              <div className="flex items-center space-x-2">
+                <span className="text-[11px] font-bold text-slate-455">Rating:</span>
+                <div className="flex space-x-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      type="button"
+                      key={star}
+                      onClick={() => setReviewRating(star)}
+                      className="text-amber-400 hover:scale-110 transition-transform bg-transparent border-none p-0.5 cursor-pointer"
+                    >
+                      <Star
+                        className={cn(
+                          "w-5 h-5",
+                          star <= reviewRating ? "fill-amber-400 text-amber-400" : "text-slate-350"
+                        )}
+                      />
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-455 uppercase">Your Review</label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  placeholder="Share your thoughts about this product..."
+                  className="w-full min-h-[80px] p-3 text-xs bg-white border border-slate-200 rounded-xl focus:border-blue-500 focus:outline-none resize-none font-sans"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSubmittingReview}
+                className="h-9 px-5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-black uppercase tracking-wider rounded-xl cursor-pointer disabled:opacity-50"
+              >
+                {isSubmittingReview ? 'Submitting...' : 'Submit Review'}
+              </button>
+            </form>
+          )}
+
+          {productReviews.length === 0 ? (
+            <p className="text-xs text-slate-455 font-bold text-center py-6">
+              No reviews yet. {isEligibleForReview ? 'Be the first to review this product!' : 'Purchase this product to leave a review.'}
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {productReviews.map((rev) => {
+                const initials = rev.username
+                  ? rev.username.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                  : 'U';
+                return (
+                  <div key={rev.reviewId || rev.id} className="p-5 rounded-2xl border border-slate-150/70 bg-white hover:border-slate-350 hover:shadow-sm transition-all duration-300 text-left space-y-3.5 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 text-xs font-black">
+                            {initials}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-slate-800 truncate max-w-[120px]">{rev.username}</h4>
+                            <div className="flex items-center space-x-1 mt-0.5">
+                              <Check className="w-3 h-3 text-emerald-600 stroke-[3.5px]" />
+                              <span className="text-[9px] text-emerald-655 font-bold">Verified Buyer</span>
+                            </div>
+                          </div>
+                        </div>
+                        <Rating value={rev.rating} readOnly size="sm" />
+                      </div>
+                      <p className="text-xs text-slate-550 leading-relaxed font-sans italic">{rev.comment}</p>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] font-bold text-slate-400">
+                      <button className="flex items-center space-x-1.5 hover:text-slate-700 transition-colors active:scale-90 cursor-pointer border-none bg-transparent">
+                        <ThumbsUp className="w-3.5 h-3.5" />
+                        <span>Helpful</span>
+                      </button>
+                      <span>{new Date(rev.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>    </div>
 
         {/* Frequently Bought Together */}
         <div className="bg-white rounded-[24px] border border-slate-200/60 p-6 md:p-8 shadow-[0_4px_30px_rgba(15,23,42,0.01)] space-y-6">
