@@ -42,13 +42,31 @@ class ReviewService {
     }
   }
 
-  async submitReview(productId: string, rating: number, comment: string): Promise<Review> {
+  async submitReview(productId: string, rating: number, comment: string, username?: string): Promise<Review> {
     const response = await reviewApi.post('/api/v1/reviews', {
       productId,
       rating,
       comment,
+      username,
     });
     return response.data.data;
+  }
+
+  async updateReview(reviewId: string, rating: number, comment: string): Promise<Review> {
+    const response = await reviewApi.put(`/api/v1/reviews/${reviewId}`, {
+      rating,
+      comment,
+    });
+    return response.data.data;
+  }
+
+  async deleteReview(reviewId: string): Promise<void> {
+    await reviewApi.delete(`/api/v1/reviews/${reviewId}`);
+  }
+
+  async getAllReviews(): Promise<Review[]> {
+    const response = await reviewApi.get('/api/v1/reviews');
+    return response.data.data || [];
   }
 }
 

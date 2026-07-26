@@ -35,10 +35,6 @@ import { productService } from '../services/product.service';
 import { getImageUrl } from '../utils/imageHelper';
 
 // Import local images
-import macbookImg from '../assets/products/macbook.jpg';
-import ssdImg from '../assets/products/samsung_t7_ssd.jpg';
-import sleeveImg from '../assets/products/laptop_sleeve_leather.jpg';
-import matImg from '../assets/products/premium_desk_mat.jpg';
 import emptyCartImg from '../assets/products/empty_shopping_cart.jpg';
 
 export const Cart: React.FC = () => {
@@ -166,49 +162,13 @@ export const Cart: React.FC = () => {
 
   // Accessories list (Frequently Bought Together) dynamically resolved from catalog database
   const accessories = useMemo(() => {
-    if (catalogProducts.length === 0) {
-      return [
-        {
-          id: 'acc-ssd',
-          name: 'Samsung T7 Shield 2TB SSD',
-          brand: 'SAMSUNG',
-          price: 14499,
-          listPrice: 17999,
-          image: ssdImg,
-          rating: 5,
-          reviews: 92,
-          ram: '2TB',
-          storage: 'NVMe',
-        },
-        {
-          id: 'acc-sleeve',
-          name: 'Leather Laptop Sleeve 16"',
-          brand: 'PREMIUM ACCESSORIES' as const,
-          price: 3999,
-          listPrice: 4999,
-          image: sleeveImg,
-          rating: 4,
-          reviews: 43,
-          ram: '16-inch' as const,
-          storage: 'Leather' as const,
-        },
-        {
-          id: 'acc-mat',
-          name: 'Premium Desk Mat Pro',
-          brand: 'PREMIUM ACCESSORIES' as const,
-          price: 1299,
-          listPrice: 1999,
-          image: matImg,
-          rating: 5,
-          reviews: 114,
-          ram: '900x400' as const,
-          storage: 'Felt' as const,
-        },
-      ];
-    }
+    if (catalogProducts.length === 0) return [];
 
-    // Map first 3 catalog products as accessories
-    return catalogProducts.slice(0, 3).map(prod => {
+    // Filter out products already in the cart
+    const otherProducts = catalogProducts.filter(p => !items.some(item => item.id === (p.productId || p.id)));
+    if (otherProducts.length === 0) return [];
+
+    return otherProducts.slice(0, 3).map((prod) => {
       const image = getImageUrl(prod);
       const ram = prod.specifications?.ram || prod.specifications?.RAM || prod.ram || 'Standard';
       const storage = prod.specifications?.storage || prod.specifications?.Storage || prod.storage || 'Standard';
@@ -229,30 +189,17 @@ export const Cart: React.FC = () => {
         storage,
       };
     });
-  }, [catalogProducts]);
+  }, [catalogProducts, items]);
 
   // Recommended products list for empty state dynamically resolved from catalog database
   const recommendations = useMemo(() => {
-    if (catalogProducts.length === 0) {
-      return [
-        {
-          id: 'prod-macbook',
-          name: 'MacBook Pro M3 Max',
-          brand: 'Apple' as const,
-          price: 349900,
-          listPrice: 379900,
-          image: macbookImg,
-          rating: 5,
-          reviews: 124,
-          ram: '64GB' as const,
-          storage: '1TB' as const,
-          saleBadge: 'Sale -8%',
-        },
-      ];
-    }
+    if (catalogProducts.length === 0) return [];
 
-    // Map catalog products as recommendations
-    return catalogProducts.map(prod => {
+    // Filter out products already in the cart
+    const otherProducts = catalogProducts.filter(p => !items.some(item => item.id === (p.productId || p.id)));
+    if (otherProducts.length === 0) return [];
+
+    return otherProducts.slice(0, 5).map(prod => {
       const image = getImageUrl(prod);
       const ram = prod.specifications?.ram || prod.specifications?.RAM || prod.ram || 'Standard';
       const storage = prod.specifications?.storage || prod.specifications?.Storage || prod.storage || 'Standard';
@@ -273,7 +220,7 @@ export const Cart: React.FC = () => {
         storage,
       };
     });
-  }, [catalogProducts]);
+  }, [catalogProducts, items]);
 
   const handleAddAccessory = (acc: typeof accessories[0]) => {
     dispatch(

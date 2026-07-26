@@ -22,14 +22,13 @@ import {
   Layers,
   AlertTriangle,
   Star,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '../lib/cn';
 import toast from 'react-hot-toast';
 
 import macbookImg from '../assets/products/macbook.jpg';
-import ssdImg from '../assets/products/samsung_t7_ssd.jpg';
-import sleeveImg from '../assets/products/laptop_sleeve_leather.jpg';
-import matImg from '../assets/products/premium_desk_mat.jpg';
 import guideImg from '../assets/products/guide.jpg';
 
 import { productService } from '../services/product.service';
@@ -80,6 +79,13 @@ export const ProductDetail: React.FC = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
 
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState(5);
+  const [editComment, setEditComment] = useState('');
+  const [isUpdatingReview, setIsUpdatingReview] = useState(false);
+  const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
+
   const averageRating = useMemo(() => {
     if (productReviews.length === 0) return 5.0;
     const sum = productReviews.reduce((acc, rev) => acc + rev.rating, 0);
@@ -93,6 +99,7 @@ export const ProductDetail: React.FC = () => {
     )
   );
   const currentCartQty = cartItem ? cartItem.quantity : 0;
+  const { profile } = useSelector((state: RootState) => state.auth);
 
   // Load product details from backend on id transitions
   useEffect(() => {
@@ -114,6 +121,7 @@ export const ProductDetail: React.FC = () => {
         if (token) {
           const userId = decodeJwtSub(token);
           if (userId) {
+            setCurrentUserId(userId);
             // Check wishlist status
             const wishlisted = await wishlistService.getWishlist(userId);
             setIsWishlisted(wishlisted.includes(id));
@@ -131,6 +139,15 @@ export const ProductDetail: React.FC = () => {
             });
             setIsEligibleForReview(hasCompletedOrder);
           }
+        }
+
+        // Fetch catalog products for bundle recommendations
+        try {
+          const catRes = await productService.getProducts({ limit: 100 });
+          const catData = catRes.data || catRes.products || (Array.isArray(catRes) ? catRes : []);
+          setCatalogProducts(catData || []);
+        } catch (catErr) {
+          console.error('Error fetching catalog recommendations:', catErr);
         }
       } catch (err) {
         console.error('Error fetching product details:', err);
@@ -235,7 +252,8 @@ export const ProductDetail: React.FC = () => {
 
     setIsSubmittingReview(true);
     try {
-      const newReview = await reviewService.submitReview(id, reviewRating, reviewComment);
+      const displayName = profile?.fullName || profile?.email || 'Verified Buyer';
+      const newReview = await reviewService.submitReview(id, reviewRating, reviewComment, displayName);
       setProductReviews((prev) => [newReview, ...prev]);
       setReviewComment('');
       setShowReviewForm(false);
@@ -245,6 +263,51 @@ export const ProductDetail: React.FC = () => {
       toast.error(backendMsg || 'Failed to submit review.');
     } finally {
       setIsSubmittingReview(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!window.confirm('Are you sure you want to delete your review?')) return;
+    try {
+      await reviewService.deleteReview(reviewId);
+      setProductReviews((prev) => prev.filter((r) => (r.reviewId || r.id) !== reviewId));
+      toast.success('Review deleted successfully.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to delete review.');
+    }
+  };
+
+  const handleStartEdit = (rev: any) => {
+    setEditingReviewId(rev.reviewId || rev.id);
+    setEditRating(rev.rating);
+    setEditComment(rev.comment);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingReviewId(null);
+    setEditRating(5);
+    setEditComment('');
+  };
+
+  const handleUpdateReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingReviewId || isUpdatingReview) return;
+    if (!editComment.trim()) {
+      toast.error('Please enter a comment.');
+      return;
+    }
+    setIsUpdatingReview(true);
+    try {
+      const updatedReview = await reviewService.updateReview(editingReviewId, editRating, editComment);
+      setProductReviews((prev) =>
+        prev.map((r) => ((r.reviewId || r.id) === editingReviewId ? updatedReview : r))
+      );
+      handleCancelEdit();
+      toast.success('Review updated successfully.');
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || err.message || 'Failed to update review.');
+    } finally {
+      setIsUpdatingReview(false);
     }
   };
 
@@ -264,15 +327,33 @@ export const ProductDetail: React.FC = () => {
   const currentListPrice = productData?.price ? productData.price * 1.15 : null; // Simulated list price
   const emiCost = Math.round(currentPrice / 24);
 
-  // Accessories bundle (Frequently bought together)
-  const bundleItems = [
-    { id: 'acc-mouse', name: 'Magic Mouse', price: 7900, listPrice: 9900, image: matImg, specs: 'Bluetooth • Wireless' },
-    { id: 'acc-sleeve', name: 'Pro Leather Sleeve', price: 12900, listPrice: 15900, image: sleeveImg, specs: '16-inch • Leather' },
-    { id: 'acc-cable', name: 'MagSafe 3 Cable (2m)', price: 4900, listPrice: 5900, image: ssdImg, specs: '2-meter • Braided' },
-    { id: 'acc-pods', name: 'AirPods Pro (2nd Gen)', price: 24900, listPrice: 26900, image: guideImg, specs: 'Active Noise Cancelling' },
-  ];
+  // Accessories bundle (Frequently bought together) dynamically resolved from catalog database
+  const bundleItems = useMemo(() => {
+    if (catalogProducts.length === 0) return [];
 
-  const handleAddBundleItem = (item: typeof bundleItems[0]) => {
+    // Filter out current product
+    const otherProducts = catalogProducts.filter(p => (p.productId || p.id) !== id);
+    if (otherProducts.length === 0) return [];
+
+    return otherProducts.slice(0, 4).map((prod) => {
+      const image = getImageUrl(prod);
+      const ram = prod.specifications?.ram || prod.specifications?.RAM || prod.ram || 'Standard';
+      const storage = prod.specifications?.storage || prod.specifications?.Storage || prod.storage || 'Standard';
+      const listPrice = prod.listPrice || (prod.discount ? Math.round(prod.price / (1 - prod.discount / 100)) : prod.price);
+
+      return {
+        id: prod.productId || prod.id,
+        name: prod.name,
+        brand: prod.brand || 'Accessories',
+        price: prod.price,
+        listPrice,
+        image,
+        specs: ram && storage ? `${ram} • ${storage}` : (ram || storage || 'Standard'),
+      };
+    });
+  }, [catalogProducts, id]);
+
+  const handleAddBundleItem = (item: any) => {
     dispatch(
       addToCartBackend({
         productId: item.id,
@@ -583,108 +664,193 @@ export const ProductDetail: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {productReviews.map((rev) => {
-                const initials = rev.username
-                  ? rev.username.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
+                const isUuid = /^[0-9a-fA-F-]{8,36}$/.test(rev.username || '');
+                let displayUsername = rev.username || 'Verified Buyer';
+                if (currentUserId && rev.userId === currentUserId) {
+                  displayUsername = profile?.fullName || profile?.email || 'You';
+                } else if (isUuid) {
+                  displayUsername = 'Verified Buyer';
+                }
+
+                const initials = displayUsername
+                  ? displayUsername.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
                   : 'U';
+                const isEditing = editingReviewId === (rev.reviewId || rev.id);
+
                 return (
                   <div key={rev.reviewId || rev.id} className="p-5 rounded-2xl border border-slate-150/70 bg-white hover:border-slate-350 hover:shadow-sm transition-all duration-300 text-left space-y-3.5 flex flex-col justify-between">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 text-xs font-black">
-                            {initials}
-                          </div>
-                          <div>
-                            <h4 className="text-xs font-black text-slate-800 truncate max-w-[120px]">{rev.username}</h4>
-                            <div className="flex items-center space-x-1 mt-0.5">
-                              <Check className="w-3 h-3 text-emerald-600 stroke-[3.5px]" />
-                              <span className="text-[9px] text-emerald-655 font-bold">Verified Buyer</span>
-                            </div>
+                    {isEditing ? (
+                      <form onSubmit={handleUpdateReview} className="space-y-3 text-left w-full">
+                        <div className="flex items-center space-x-1.5">
+                          <span className="text-[10px] font-black text-slate-455">Rating:</span>
+                          <div className="flex">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                type="button"
+                                key={star}
+                                onClick={() => setEditRating(star)}
+                                className="text-amber-400 hover:scale-110 transition-transform bg-transparent border-none p-0.5 cursor-pointer"
+                              >
+                                <Star
+                                  className={cn(
+                                    "w-4 h-4",
+                                    star <= editRating ? "fill-amber-400 text-amber-400" : "text-slate-350"
+                                  )}
+                                />
+                              </button>
+                            ))}
                           </div>
                         </div>
-                        <Rating value={rev.rating} readOnly size="sm" />
-                      </div>
-                      <p className="text-xs text-slate-550 leading-relaxed font-sans italic">{rev.comment}</p>
-                    </div>
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] font-bold text-slate-400">
-                      <button className="flex items-center space-x-1.5 hover:text-slate-700 transition-colors active:scale-90 cursor-pointer border-none bg-transparent">
-                        <ThumbsUp className="w-3.5 h-3.5" />
-                        <span>Helpful</span>
-                      </button>
-                      <span>{new Date(rev.createdAt).toLocaleDateString()}</span>
-                    </div>
+                        <textarea
+                          value={editComment}
+                          onChange={(e) => setEditComment(e.target.value)}
+                          className="w-full min-h-[60px] p-2.5 text-xs bg-white border border-slate-200 rounded-lg focus:border-blue-500 focus:outline-none resize-none font-sans"
+                          required
+                        />
+                        <div className="flex items-center space-x-2">
+                          <button
+                            type="submit"
+                            disabled={isUpdatingReview}
+                            className="h-8 px-4 bg-slate-900 hover:bg-slate-800 text-white text-[9px] font-black uppercase tracking-wider rounded-lg cursor-pointer disabled:opacity-50"
+                          >
+                            {isUpdatingReview ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCancelEdit}
+                            className="h-8 px-4 border border-slate-200 text-slate-550 hover:bg-slate-50 text-[9px] font-black uppercase tracking-wider rounded-lg cursor-pointer bg-white"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className="w-9 h-9 rounded-full bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 text-xs font-black">
+                                {initials}
+                              </div>
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <h4 className="text-xs font-black text-slate-800 truncate max-w-[120px]">{displayUsername}</h4>
+                                  {currentUserId && rev.userId === currentUserId && (
+                                    <span className="bg-blue-100 text-blue-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider">You</span>
+                                  )}
+                                </div>
+                                <div className="flex items-center space-x-1 mt-0.5">
+                                  <Check className="w-3 h-3 text-emerald-600 stroke-[3.5px]" />
+                                  <span className="text-[9px] text-emerald-655 font-bold">Verified Buyer</span>
+                                </div>
+                              </div>
+                            </div>
+                            <Rating value={rev.rating} readOnly size="sm" />
+                          </div>
+                          <p className="text-xs text-slate-550 leading-relaxed font-sans italic">{rev.comment}</p>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[10px] font-bold text-slate-400">
+                          {currentUserId && rev.userId === currentUserId ? (
+                            <div className="flex items-center space-x-3">
+                              <button
+                                onClick={() => handleStartEdit(rev)}
+                                className="flex items-center space-x-1 hover:text-blue-650 transition-colors cursor-pointer border-none bg-transparent"
+                              >
+                                <Edit className="w-3 h-3" />
+                                <span>Edit</span>
+                              </button>
+                              <button
+                                onClick={() => handleDeleteReview(rev.reviewId || rev.id)}
+                                className="flex items-center space-x-1 hover:text-red-655 transition-colors cursor-pointer border-none bg-transparent"
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          ) : (
+                            <button className="flex items-center space-x-1.5 hover:text-slate-700 transition-colors active:scale-90 cursor-pointer border-none bg-transparent">
+                              <ThumbsUp className="w-3.5 h-3.5" />
+                              <span>Helpful</span>
+                            </button>
+                          )}
+                          <span>{new Date(rev.createdAt).toLocaleDateString()}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
-        </div>    </div>
+        </div>
+      </div>        {/* Frequently Bought Together */}
+        {bundleItems.length > 0 && (
+          <div className="bg-white rounded-[24px] border border-slate-200/60 p-6 md:p-8 shadow-[0_4px_30px_rgba(15,23,42,0.01)] space-y-6">
+            <div className="flex items-center space-x-2 pb-3.5 border-b border-slate-100">
+              <h2 className="text-base font-black text-slate-855 tracking-tight">Frequently Bought Together</h2>
+              <div className="bg-blue-50 text-blue-700 border border-blue-100/50 rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-wide flex items-center space-x-1">
+                <Sparkles className="w-3 h-3 text-blue-600" />
+                <span>Recommendation</span>
+              </div>
+            </div>
 
-        {/* Frequently Bought Together */}
-        <div className="bg-white rounded-[24px] border border-slate-200/60 p-6 md:p-8 shadow-[0_4px_30px_rgba(15,23,42,0.01)] space-y-6">
-          <div className="flex items-center space-x-2 pb-3.5 border-b border-slate-100">
-            <h2 className="text-base font-black text-slate-850 tracking-tight">Frequently Bought Together</h2>
-            <div className="bg-blue-50 text-blue-700 border border-blue-100/50 rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-wide flex items-center space-x-1">
-              <Sparkles className="w-3 h-3 text-blue-600" />
-              <span>Recommendation</span>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+              {bundleItems.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => navigate(`/product/${item.id}`)}
+                  className="p-3.5 rounded-[28px] border border-slate-200/50 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.02)] hover:shadow-[0_20px_40px_rgba(15,23,42,0.06)] hover:-translate-y-1 transition-all duration-350 flex flex-col justify-between items-stretch overflow-hidden group cursor-pointer"
+                >
+                  <div className="relative w-full aspect-[4/3] rounded-[22px] bg-slate-50/30 overflow-hidden flex items-center justify-center flex-shrink-0">
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
+                    />
+                  </div>
+                  <div className="flex flex-col flex-grow justify-between text-left mt-3">
+                    <div className="space-y-1 mb-2">
+                      <span className="text-[10px] font-black text-blue-655 tracking-wider uppercase">ACCESSORIES</span>
+                      <h4 className="text-[13.5px] font-extrabold text-slate-800 tracking-tight leading-tight mt-1 truncate w-full">
+                        {item.name}
+                      </h4>
+                      <div className="flex items-center space-x-1 pt-1">
+                        <Rating value={5} readOnly size="sm" />
+                        <span className="text-[10.5px] text-slate-800 font-bold ml-1.5">(48)</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 mt-2">
+                        <span className="text-[9.5px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-[5px]">
+                          {item.specs}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="border-t border-slate-100/80 my-3" />
+                    <div className="flex items-center justify-between flex-shrink-0">
+                      <div className="flex flex-col text-left">
+                        <Price value={item.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
+                        {item.listPrice && (
+                          <Price value={item.listPrice} className="text-[10.5px] text-slate-400 line-through font-bold mt-1" />
+                        )}
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAddBundleItem(item);
+                          toast.success(`${item.name} added to cart!`, { icon: '🛒' });
+                        }}
+                        className="w-9 h-9 rounded-full bg-blue-50/70 hover:bg-blue-600 text-slate-800 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
+                        aria-label={`Add ${item.name} to cart`}
+                      >
+                        <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
-            {bundleItems.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => navigate(`/product/${item.id}`)}
-                className="p-3.5 rounded-[28px] border border-slate-200/50 bg-white/95 shadow-[0_8px_30px_rgba(15,23,42,0.02)] hover:shadow-[0_20px_40px_rgba(15,23,42,0.06)] hover:-translate-y-1 transition-all duration-350 flex flex-col justify-between items-stretch overflow-hidden group cursor-pointer"
-              >
-                <div className="relative w-full aspect-[4/3] rounded-[22px] bg-slate-50/30 overflow-hidden flex items-center justify-center flex-shrink-0">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
-                  />
-                </div>
-                <div className="flex flex-col flex-grow justify-between text-left mt-3">
-                  <div className="space-y-1 mb-2">
-                    <span className="text-[10px] font-black text-blue-655 tracking-wider uppercase">ACCESSORIES</span>
-                    <h4 className="text-[13.5px] font-extrabold text-slate-800 tracking-tight leading-tight mt-1 truncate w-full">
-                      {item.name}
-                    </h4>
-                    <div className="flex items-center space-x-1 pt-1">
-                      <Rating value={5} readOnly size="sm" />
-                      <span className="text-[10.5px] text-slate-800 font-bold ml-1.5">(48)</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      <span className="text-[9.5px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-[5px]">
-                        {item.specs}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="border-t border-slate-100/80 my-3" />
-                  <div className="flex items-center justify-between flex-shrink-0">
-                    <div className="flex flex-col text-left">
-                      <Price value={item.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
-                      {item.listPrice && (
-                        <Price value={item.listPrice} className="text-[10.5px] text-slate-400 line-through font-bold mt-1" />
-                      )}
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAddBundleItem(item);
-                        toast.success(`${item.name} added to cart!`, { icon: '🛒' });
-                      }}
-                      className="w-9 h-9 rounded-full bg-blue-50/70 hover:bg-blue-600 text-slate-800 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
-                      aria-label={`Add ${item.name} to cart`}
-                    >
-                      <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
     </MainLayout>
   );

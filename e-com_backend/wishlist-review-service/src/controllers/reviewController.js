@@ -18,8 +18,8 @@ const getProductReviews = async (req, res) => {
 const createReview = async (req, res) => {
   try {
     const userId = req.user.sub;
-    const username = req.user.username || req.user.email || 'Verified Buyer';
-    const { productId, rating, comment } = req.body;
+    const { productId, rating, comment, username: bodyUsername } = req.body;
+    const username = bodyUsername || req.user.username || req.user.email || 'Verified Buyer';
 
     if (!productId || !rating) {
       return res.status(400).json({ success: false, message: 'ProductId and Rating are required.' });
@@ -88,4 +88,58 @@ const createReview = async (req, res) => {
   }
 };
 
-module.exports = { getProductReviews, createReview };
+const updateReview = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const { reviewId } = req.params;
+    const { rating, comment } = req.body;
+
+    if (!rating) {
+      return res.status(400).json({ success: false, message: 'Rating is required.' });
+    }
+
+    const updated = await reviewService.updateReview(userId, reviewId, { rating, comment });
+    return res.status(200).json({ success: true, data: updated });
+  } catch (error) {
+    console.error('Error updating review:', error);
+    if (error.message.includes('Unauthorized') || error.message.includes('not found')) {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const deleteReview = async (req, res) => {
+  try {
+    const userId = req.user.sub;
+    const userRoles = req.user['cognito:groups'] || [];
+    const { reviewId } = req.params;
+
+    const result = await reviewService.deleteReview(userId, reviewId, userRoles);
+    return res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    console.error('Error deleting review:', error);
+    if (error.message.includes('Unauthorized') || error.message.includes('not found')) {
+      return res.status(403).json({ success: false, message: error.message });
+    }
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getAllReviews = async (req, res) => {
+  try {
+    const userRoles = req.user['cognito:groups'] || [];
+    if (!userRoles.includes('Admin')) {
+      return res.status(403).json({ success: false, message: 'Forbidden. Admin access required.' });
+    }
+    const reviews = await reviewService.getAllReviews();
+    return res.status(200).json({ success: true, data: reviews });
+  } catch (error) {
+    console.error('Error getting all reviews:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { getProductReviews, createReview, updateReview, deleteReview, getAllReviews };
+
+

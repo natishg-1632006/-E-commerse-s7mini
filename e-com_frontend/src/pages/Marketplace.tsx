@@ -19,7 +19,6 @@ import {
   Headphones,
   Watch,
   Sparkles,
-  Star,
   Truck,
   ShoppingBag,
 } from 'lucide-react';
@@ -847,34 +846,7 @@ export const Marketplace: React.FC = () => {
             </div>
           </section>
 
-          {/* Testimonial review */}
-          <section className="bg-blue-50/30 rounded-[32px] border border-blue-100/50 p-6 sm:p-10 flex flex-col items-center justify-center text-center space-y-6">
-            <h2 className="text-xl font-black text-slate-900 tracking-tight">Trusted by Creators</h2>
-            <div className="max-w-xl bg-white border border-slate-200/50 rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col items-center space-y-4">
-              <div className="flex items-center space-x-1">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 fill-blue-600 text-blue-600" />
-                ))}
-              </div>
-              <p className="text-xs sm:text-sm text-slate-655 font-bold italic leading-relaxed">
-                "The AI curation on NatCart is genuinely impressive. It found exactly the workstation components I needed without me having to dig through hundreds of pages."
-              </p>
-              <div className="flex items-center space-x-3 mt-2 select-none">
-                <div className="w-10 h-10 rounded-full bg-slate-100 overflow-hidden flex items-center justify-center border border-slate-200">
-                  <span className="text-[10px] font-black text-slate-500 uppercase">SJ</span>
-                </div>
-                <div className="text-left space-y-0.5">
-                  <div className="text-xs font-black text-slate-800">Sarah Jenkins</div>
-                  <div className="text-[9.5px] text-slate-455 font-bold">Lead Designer, TechFlow</div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2 pt-2 select-none">
-              <span className="w-6 h-1 rounded-full bg-blue-600" />
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-350" />
-              <span className="w-1.5 h-1.5 rounded-full bg-slate-350" />
-            </div>
-          </section>
+
         </div>
       </MainLayout>
     );
