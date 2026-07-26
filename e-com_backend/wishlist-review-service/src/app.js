@@ -6,6 +6,7 @@ const cors = require('cors');
 
 const wishlistRoutes = require('./routes/wishlistRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const brandRoutes = require('./routes/brandRoutes');
 
 const app = express();
 
@@ -24,12 +25,14 @@ app.get('/api', (req, res) => {
     endpoints: {
       wishlist: '/api/v1/wishlist',
       reviews: '/api/v1/reviews',
+      brands: '/api/v1/brands',
     },
   });
 });
 
 app.use('/api/v1/wishlist', wishlistRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
+app.use('/api/v1/brands', brandRoutes);
 
 // 404 handler
 app.use((req, res) => {

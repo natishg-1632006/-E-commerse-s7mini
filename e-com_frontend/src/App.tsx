@@ -25,6 +25,8 @@ import AdminAnalytics from './pages/admin/AdminAnalytics';
 import AdminCategories from './pages/admin/AdminCategories';
 import AdminCoupons from './pages/admin/AdminCoupons';
 import AdminReviews from './pages/admin/AdminReviews';
+import { Brands } from './pages/Brands';
+import { AdminBrands } from './pages/admin/AdminBrands';
 
 const queryClient = new QueryClient();
 
@@ -299,6 +301,22 @@ export function App() {
                 <AdminRoute>
                   <AdminReviews />
                 </AdminRoute>
+              }
+            />
+            <Route
+              path="/admin/brands"
+              element={
+                <AdminRoute>
+                  <AdminBrands />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="/brands"
+              element={
+                <ProtectedRoute>
+                  <Brands />
+                </ProtectedRoute>
               }
             />
             <Route path="*" element={<Navigate to="/" replace />} />

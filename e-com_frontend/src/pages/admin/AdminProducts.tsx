@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { productService } from '../../services/product.service';
+import { brandService } from '../../services/brand.service';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { ProductsTableSkeleton, DetailPageSkeleton, SafeImage } from '../../components/admin/AdminSkeletons';
 import { getImageUrl } from '../../utils/imageHelper';
@@ -437,6 +438,7 @@ const AdminProducts: React.FC = () => {
   const [productsList, setProductsList] = useState<ProductItem[]>([]);
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
   const [brandOptionsList, setBrandOptionsList] = useState<string[]>(brandOptions);
+  const [dbBrands, setDbBrands] = useState<string[]>([]);
 
   // Loading States
   const [loading, setLoading] = useState(true);
@@ -634,7 +636,7 @@ const AdminProducts: React.FC = () => {
     setPage(1);
   }, [debouncedSearch, selectedCategory, selectedBrand, minPrice, maxPrice, statusFilter, featuredFilter, sortBy]);
 
-  // Load categories list on mount
+  // Load categories and brands list on mount
   useEffect(() => {
     const loadCategories = async () => {
       try {
@@ -654,7 +656,20 @@ const AdminProducts: React.FC = () => {
         console.error('Error fetching categories:', err);
       }
     };
+    const loadBrands = async () => {
+      try {
+        const res = await brandService.getAllBrands();
+        if (res && res.length > 0) {
+          const names = res.map(b => b.name);
+          setDbBrands(names);
+          setBrandOptionsList(names);
+        }
+      } catch (err) {
+        console.error('Error fetching database brands:', err);
+      }
+    };
     loadCategories();
+    loadBrands();
   }, []);
 
   // Main list fetcher
@@ -705,7 +720,8 @@ const AdminProducts: React.FC = () => {
       // Derive brands dynamically from product list
       if (selectedBrand === 'ALL' && fetched.length > 0) {
         const uniqueBrands = Array.from(new Set(mapped.map(p => p.brand).filter(Boolean)));
-        const merged = Array.from(new Set([...uniqueBrands, ...brandOptions]));
+        const baseBrands = dbBrands.length > 0 ? dbBrands : brandOptions;
+        const merged = Array.from(new Set([...uniqueBrands, ...baseBrands]));
         setBrandOptionsList(merged);
       }
     } catch (err: any) {
@@ -1863,7 +1879,7 @@ const AdminProducts: React.FC = () => {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                         {/* Searchable Brand Dropdown */}
-                        <BrandDropdown selected={brand} brands={brandOptionsList} onSelect={setBrand} />
+                        <BrandDropdown selected={brand} brands={dbBrands.length > 0 ? dbBrands : brandOptions} onSelect={setBrand} />
 
                         {/* Searchable Category Dropdown */}
                         <CategoryDropdown selectedId={categoryId} categories={categoriesList.map(c => ({ id: c.categoryId, label: c.name }))} onSelect={setCategoryId} />

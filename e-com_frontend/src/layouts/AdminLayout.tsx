@@ -16,6 +16,7 @@ import {
   Tag,
   Ticket,
   MessageSquare,
+  Tags,
 } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState } from '../store';
@@ -28,6 +29,7 @@ const navItems = [
   { key: 'customers', label: 'Customers', icon: Users, path: '/admin/customers' },
   { key: 'products', label: 'Products', icon: Package, path: '/admin/products' },
   { key: 'categories', label: 'Categories', icon: Tag, path: '/admin/categories' },
+  { key: 'brands', label: 'Brands', icon: Tags, path: '/admin/brands' },
   { key: 'inventory', label: 'Inventory', icon: Boxes, path: '/admin/inventory' },
   { key: 'analytics', label: 'Analytics', icon: BarChart3, path: '/admin/analytics' },
   { key: 'coupons', label: 'Coupons', icon: Ticket, path: '/admin/coupons' },

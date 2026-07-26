@@ -32,6 +32,7 @@ import type { RootState, AppDispatch } from '../store';
 import heroBannerImg from '../assets/future_tech_banner.jpg';
 
 import { productService } from '../services/product.service';
+import { brandService } from '../services/brand.service';
 import { getImageUrl } from '../utils/imageHelper';
 
 const formatCategoryName = (name: string) => {
@@ -107,6 +108,7 @@ export const Marketplace: React.FC = () => {
   // Price filter states
   const [minPrice, setMinPrice] = useState<number>(0);
   const [maxPrice, setMaxPrice] = useState<number>(400000);
+  const [dbBrands, setDbBrands] = useState<string[]>([]);
 
   // Responsive Drawer state
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
@@ -311,6 +313,21 @@ export const Marketplace: React.FC = () => {
       fetchTrending();
     }
   }, [showShopGrid]);
+
+  // Fetch brands for ticker on mount
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const list = await brandService.getAllBrands();
+        if (list && list.length > 0) {
+          setDbBrands(list.map(b => b.name));
+        }
+      } catch (err) {
+        console.error('Error fetching brands for ticker:', err);
+      }
+    };
+    fetchBrands();
+  }, []);
 
   const handleBrandChange = (brand: string) => {
     setSelectedBrands((prev) =>
@@ -605,7 +622,7 @@ export const Marketplace: React.FC = () => {
                   View Products
                 </button>
                 <button
-                  onClick={() => setShowShopGrid(true)}
+                  onClick={() => navigate('/brands')}
                   className="h-11 px-6 rounded-full border border-slate-200 bg-white text-slate-800 text-xs font-black uppercase tracking-wider hover:bg-slate-50 transition-all cursor-pointer active:scale-95 shadow-sm"
                 >
                   View Brands
@@ -682,12 +699,18 @@ export const Marketplace: React.FC = () => {
 
           {/* Brands logo ticker */}
           <section className="py-2 border-t border-b border-slate-100 flex flex-wrap items-center justify-around gap-y-4 gap-x-6 text-[10px] sm:text-[11px] font-black text-slate-350 tracking-[0.2em] uppercase select-none">
-            <span>Techcore</span>
-            <span>Quantum</span>
-            <span>Nexus</span>
-            <span>Aether</span>
-            <span>Zenith</span>
-            <span>Omega</span>
+            {dbBrands.length > 0 ? (
+              dbBrands.map((b) => <span key={b}>{b}</span>)
+            ) : (
+              <>
+                <span>Techcore</span>
+                <span>Quantum</span>
+                <span>Nexus</span>
+                <span>Aether</span>
+                <span>Zenith</span>
+                <span>Omega</span>
+              </>
+            )}
           </section>
 
           {/* Trending Today */}

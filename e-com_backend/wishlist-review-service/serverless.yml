@@ -16,6 +16,7 @@ provider:
     AWS_REGION: ${env:AWS_REGION}
     DYNAMODB_WISHLISTS_TABLE: ${env:DYNAMODB_WISHLISTS_TABLE}
     DYNAMODB_REVIEWS_TABLE: ${env:DYNAMODB_REVIEWS_TABLE}
+    DYNAMODB_BRANDS_TABLE: ${env:DYNAMODB_BRANDS_TABLE}
     COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
     COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
     ORDER_SERVICE_URL: ${env:ORDER_SERVICE_URL}
@@ -36,6 +37,8 @@ provider:
             - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_WISHLISTS_TABLE}/index/*
             - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_REVIEWS_TABLE}
             - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_REVIEWS_TABLE}/index/*
+            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_BRANDS_TABLE}
+            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_BRANDS_TABLE}/index/*
 
 functions:
   app:

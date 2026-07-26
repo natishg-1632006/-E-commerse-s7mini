@@ -104,7 +104,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-250 ${isMegamenuOpen ? 'transform rotate-180' : ''}`} />
               </button>
               <Link to="/?all=true" className="hover:text-blue-600 transition-colors">Products</Link>
-              <Link to="/?brand=Apple" className="hover:text-blue-600 transition-colors">Brands</Link>
+              <Link to="/brands" className="hover:text-blue-600 transition-colors">Brands</Link>
             </nav>
           </div>
 
