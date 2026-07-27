@@ -174,28 +174,28 @@ const createProduct = async (data) => {
   return product;
 };
 
-  const getProductsByIds = async (productIds) => {
+const getProductsByIds = async (productIds) => {
 
-    if (!Array.isArray(productIds) || productIds.length === 0) {
-      const err = new Error("productIds array is required");
-      err.statusCode = 400;
-      throw err;
-    }
+  if (!Array.isArray(productIds) || productIds.length === 0) {
+    const err = new Error("productIds array is required");
+    err.statusCode = 400;
+    throw err;
+  }
 
-    const { Responses } = await docClient.send(
-      new BatchGetCommand({
-        RequestItems: {
-          [TABLE_NAME]: {
-            Keys: productIds.map((id) => ({
-              productId: id,
-            })),
-          },
+  const { Responses } = await docClient.send(
+    new BatchGetCommand({
+      RequestItems: {
+        [TABLE_NAME]: {
+          Keys: productIds.map((id) => ({
+            productId: id,
+          })),
         },
-      })
-    );
+      },
+    })
+  );
 
-    return Responses?.[TABLE_NAME] || [];
-  };
+  return Responses?.[TABLE_NAME] || [];
+};
 
 const updateProduct = async (id, data) => {
   const existing = await getProductById(id);

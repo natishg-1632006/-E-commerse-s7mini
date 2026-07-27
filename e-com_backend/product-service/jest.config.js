@@ -1,0 +1,13 @@
+module.exports = {
+    testEnvironment: "node",
+
+    testMatch: [
+        "**/tests/**/*.test.js"
+    ],
+
+    collectCoverage: false,
+
+    clearMocks: true,
+
+    verbose: true
+};
