@@ -72,6 +72,7 @@ export const ProductDetail: React.FC = () => {
   const [isAdding, setIsAdding] = useState(false);
 
   const [productReviews, setProductReviews] = useState<any[]>([]);
+  const [allReviews, setAllReviews] = useState<any[]>([]);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isEligibleForReview, setIsEligibleForReview] = useState(false);
   const [reviewRating, setReviewRating] = useState(5);
@@ -91,6 +92,28 @@ export const ProductDetail: React.FC = () => {
     const sum = productReviews.reduce((acc, rev) => acc + rev.rating, 0);
     return Number((sum / productReviews.length).toFixed(1));
   }, [productReviews]);
+
+  // Calculate average rating and review count per product
+  const reviewsStats = useMemo(() => {
+    const stats: Record<string, { sum: number; count: number; avgRating: number }> = {};
+    allReviews.forEach((rev) => {
+      const pId = rev.productId;
+      if (!pId) return;
+      if (!stats[pId]) {
+        stats[pId] = { sum: 0, count: 0, avgRating: 5.0 };
+      }
+      stats[pId].sum += rev.rating || 0;
+      stats[pId].count += 1;
+    });
+
+    Object.keys(stats).forEach((pId) => {
+      const s = stats[pId];
+      if (s.count > 0) {
+        s.avgRating = Number((s.sum / s.count).toFixed(1));
+      }
+    });
+    return stats;
+  }, [allReviews]);
 
   // Retrieve current items from cart to count existing quantity in cart
   const cartItem = useSelector((state: RootState) =>
@@ -146,6 +169,10 @@ export const ProductDetail: React.FC = () => {
           const catRes = await productService.getProducts({ limit: 100 });
           const catData = catRes.data || catRes.products || (Array.isArray(catRes) ? catRes : []);
           setCatalogProducts(catData || []);
+
+          // Fetch all reviews for bundle item rating calculations
+          const reviews = await reviewService.getAllReviews();
+          setAllReviews(reviews);
         } catch (catErr) {
           console.error('Error fetching catalog recommendations:', catErr);
         }
@@ -816,8 +843,10 @@ export const ProductDetail: React.FC = () => {
                         {item.name}
                       </h4>
                       <div className="flex items-center space-x-1 pt-1">
-                        <Rating value={5} readOnly size="sm" />
-                        <span className="text-[10.5px] text-slate-800 font-bold ml-1.5">(48)</span>
+                        <Rating value={reviewsStats[item.id] ? Math.round(reviewsStats[item.id].avgRating) : 5} readOnly size="sm" />
+                        <span className="text-[10.5px] text-slate-800 font-bold ml-1.5">
+                          ({reviewsStats[item.id] ? reviewsStats[item.id].count : 0})
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-1.5 mt-2">
                         <span className="text-[9.5px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-[5px]">

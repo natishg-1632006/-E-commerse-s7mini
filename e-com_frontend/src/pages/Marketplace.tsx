@@ -33,6 +33,7 @@ import heroBannerImg from '../assets/future_tech_banner.jpg';
 
 import { productService } from '../services/product.service';
 import { brandService } from '../services/brand.service';
+import { reviewService } from '../services/review.service';
 import { getImageUrl } from '../utils/imageHelper';
 
 const formatCategoryName = (name: string) => {
@@ -86,6 +87,29 @@ export const Marketplace: React.FC = () => {
   const [rawProducts, setRawProducts] = useState<any[]>([]);
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
+  const [allReviews, setAllReviews] = useState<any[]>([]);
+
+  // Calculate average rating and review count per product
+  const reviewsStats = useMemo(() => {
+    const stats: Record<string, { sum: number; count: number; avgRating: number }> = {};
+    allReviews.forEach((rev) => {
+      const pId = rev.productId;
+      if (!pId) return;
+      if (!stats[pId]) {
+        stats[pId] = { sum: 0, count: 0, avgRating: 5.0 };
+      }
+      stats[pId].sum += rev.rating || 0;
+      stats[pId].count += 1;
+    });
+
+    Object.keys(stats).forEach((pId) => {
+      const s = stats[pId];
+      if (s.count > 0) {
+        s.avgRating = Number((s.sum / s.count).toFixed(1));
+      }
+    });
+    return stats;
+  }, [allReviews]);
 
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -142,6 +166,19 @@ export const Marketplace: React.FC = () => {
       }
     };
     fetchCategories();
+  }, []);
+
+  // Load all reviews on component mount
+  useEffect(() => {
+    const fetchReviews = async () => {
+      try {
+        const reviews = await reviewService.getAllReviews();
+        setAllReviews(reviews);
+      } catch (err) {
+        console.error('Error fetching all reviews:', err);
+      }
+    };
+    fetchReviews();
   }, []);
 
   // Sync URL query params
@@ -987,8 +1024,10 @@ export const Marketplace: React.FC = () => {
                             {prod.name}
                           </h4>
                           <div className="flex items-center space-x-1 pt-1">
-                            <Rating value={5} readOnly size="sm" />
-                            <span className="text-[10.5px] text-slate-800 font-bold ml-1.5">(0)</span>
+                            <Rating value={reviewsStats[prod.productId || prod.id] ? Math.round(reviewsStats[prod.productId || prod.id].avgRating) : 5} readOnly size="sm" />
+                            <span className="text-[10.5px] text-slate-800 font-bold ml-1.5">
+                              ({reviewsStats[prod.productId || prod.id] ? reviewsStats[prod.productId || prod.id].count : 0})
+                            </span>
                           </div>
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             <span className="text-[9.5px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-[5px]">

@@ -32,6 +32,7 @@ import toast from 'react-hot-toast';
 import { cn } from '../lib/cn';
 
 import { productService } from '../services/product.service';
+import { reviewService } from '../services/review.service';
 import { getImageUrl } from '../utils/imageHelper';
 
 // Import local images
@@ -44,6 +45,29 @@ export const Cart: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [catalogProducts, setCatalogProducts] = useState<any[]>([]);
+  const [allReviews, setAllReviews] = useState<any[]>([]);
+
+  // Calculate average rating and review count per product
+  const reviewsStats = useMemo(() => {
+    const stats: Record<string, { sum: number; count: number; avgRating: number }> = {};
+    allReviews.forEach((rev) => {
+      const pId = rev.productId;
+      if (!pId) return;
+      if (!stats[pId]) {
+        stats[pId] = { sum: 0, count: 0, avgRating: 5.0 };
+      }
+      stats[pId].sum += rev.rating || 0;
+      stats[pId].count += 1;
+    });
+
+    Object.keys(stats).forEach((pId) => {
+      const s = stats[pId];
+      if (s.count > 0) {
+        s.avgRating = Number((s.sum / s.count).toFixed(1));
+      }
+    });
+    return stats;
+  }, [allReviews]);
 
   // Load cart and catalog products from backend on mount
   useEffect(() => {
@@ -53,6 +77,10 @@ export const Cart: React.FC = () => {
         const res = await productService.getProducts({ limit: 100 });
         const prodData = res.data || res.products || (Array.isArray(res) ? res : []);
         setCatalogProducts(prodData || []);
+        
+        // Fetch all reviews for rating calculations
+        const reviews = await reviewService.getAllReviews();
+        setAllReviews(reviews);
       } catch (err) {
         console.error('Error loading catalog for cart recommendations:', err);
       }
@@ -183,8 +211,8 @@ export const Cart: React.FC = () => {
         listPrice,
         saleBadge,
         image,
-        rating: prod.rating || 5,
-        reviews: prod.reviews || 45,
+        rating: reviewsStats[prod.productId || prod.id] ? Math.round(reviewsStats[prod.productId || prod.id].avgRating) : 5,
+        reviews: reviewsStats[prod.productId || prod.id] ? reviewsStats[prod.productId || prod.id].count : 0,
         ram,
         storage,
       };
@@ -214,8 +242,8 @@ export const Cart: React.FC = () => {
         listPrice,
         saleBadge,
         image,
-        rating: prod.rating || 5,
-        reviews: prod.reviews || 45,
+        rating: reviewsStats[prod.productId || prod.id] ? Math.round(reviewsStats[prod.productId || prod.id].avgRating) : 5,
+        reviews: reviewsStats[prod.productId || prod.id] ? reviewsStats[prod.productId || prod.id].count : 0,
         ram,
         storage,
       };
