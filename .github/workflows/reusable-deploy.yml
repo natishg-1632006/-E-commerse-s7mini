@@ -40,20 +40,20 @@ jobs:
         id: npm-cache
         uses: actions/cache@v4
         with:
-          path: ${{ inputs.service-name }}/node_modules
-          key: ${{ runner.os }}-npm-${{ inputs.service-name }}-${{ hashFiles(format('{0}/package-lock.json', inputs.service-name)) }}
+          path: e-com_backend/${{ inputs.service-name }}/node_modules
+          key: ${{ runner.os }}-npm-${{ inputs.service-name }}-${{ hashFiles(format('e-com_backend/{0}/package-lock.json', inputs.service-name)) }}
           restore-keys: |
             ${{ runner.os }}-npm-${{ inputs.service-name }}-
 
       - name: Install Dependencies
         if: steps.npm-cache.outputs.cache-hit != 'true'
         run: |
-          cd ${{ inputs.service-name }}
+          cd e-com_backend/${{ inputs.service-name }}
           npm ci
 
       - name: Verify package-lock.json
         run: |
-          cd ${{ inputs.service-name }}
+          cd e-com_backend/${{ inputs.service-name }}
           if [ ! -f package-lock.json ]; then
             echo "Error: package-lock.json is missing!"
             exit 1
@@ -95,14 +95,14 @@ jobs:
           USER_SERVICE_URL: dummy-users
           SNS_TOPIC_ARN: arn:aws:sns:ap-southeast-1:123456789012:dummy-topic
         run: |
-          cd ${{ inputs.service-name }}
+          cd e-com_backend/${{ inputs.service-name }}
           npx serverless@3 deploy --stage ${{ inputs.stage }} | tee deploy.log
 
       - name: Extract Endpoint URL
         id: extract-endpoint
         if: ${{ inputs.verify-health }}
         run: |
-          node .github/scripts/parse_endpoint.js ${{ inputs.service-name }}/deploy.log
+          node .github/scripts/parse_endpoint.js e-com_backend/${{ inputs.service-name }}/deploy.log
 
       - name: Verify Health Check (GET /health)
         if: ${{ inputs.verify-health }}

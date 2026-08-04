@@ -21,18 +21,18 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            analytics-service: 'analytics-service/**'
-            cart-service: 'cart-service/**'
-            category-service: 'category-service/**'
-            cognito-trigger-service: 'cognito-trigger-service/**'
-            coupon-service: 'coupon-service/**'
-            inventory-service: 'inventory-service/**'
-            notification-service: 'notification-service/**'
-            order-service: 'order-service/**'
-            payment-service: 'payment-service/**'
-            product-service: 'product-service/**'
-            user-service: 'user-service/**'
-            wishlist-review-service: 'wishlist-review-service/**'
+            analytics-service: 'e-com_backend/analytics-service/**'
+            cart-service: 'e-com_backend/cart-service/**'
+            category-service: 'e-com_backend/category-service/**'
+            cognito-trigger-service: 'e-com_backend/cognito-trigger-service/**'
+            coupon-service: 'e-com_backend/coupon-service/**'
+            inventory-service: 'e-com_backend/inventory-service/**'
+            notification-service: 'e-com_backend/notification-service/**'
+            order-service: 'e-com_backend/order-service/**'
+            payment-service: 'e-com_backend/payment-service/**'
+            product-service: 'e-com_backend/product-service/**'
+            user-service: 'e-com_backend/user-service/**'
+            wishlist-review-service: 'e-com_backend/wishlist-review-service/**'
 
   validate:
     needs: detect-changes
@@ -56,20 +56,20 @@ jobs:
         id: service-npm-cache
         uses: actions/cache@v4
         with:
-          path: ${{ matrix.service }}/node_modules
-          key: ${{ runner.os }}-npm-${{ matrix.service }}-${{ hashFiles(format('{0}/package-lock.json', matrix.service)) }}
+          path: e-com_backend/${{ matrix.service }}/node_modules
+          key: ${{ runner.os }}-npm-${{ matrix.service }}-${{ hashFiles(format('e-com_backend/{0}/package-lock.json', matrix.service)) }}
           restore-keys: |
             ${{ runner.os }}-npm-${{ matrix.service }}-
 
       - name: Install Service Dependencies
         if: steps.service-npm-cache.outputs.cache-hit != 'true'
         run: |
-          cd ${{ matrix.service }}
+          cd e-com_backend/${{ matrix.service }}
           npm ci
 
       - name: Verify package-lock.json
         run: |
-          cd ${{ matrix.service }}
+          cd e-com_backend/${{ matrix.service }}
           if [ ! -f package-lock.json ]; then
             echo "Error: package-lock.json is missing!"
             exit 1
@@ -80,38 +80,39 @@ jobs:
         id: root-npm-cache
         uses: actions/cache@v4
         with:
-          path: node_modules
-          key: ${{ runner.os }}-root-npm-${{ hashFiles('package-lock.json') }}
+          path: e-com_backend/node_modules
+          key: ${{ runner.os }}-root-npm-${{ hashFiles('e-com_backend/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-root-npm-
 
       - name: Install Root Quality Tools
         if: steps.root-npm-cache.outputs.cache-hit != 'true'
-        run: npm install --no-audit
+        run: |
+          cd e-com_backend
+          npm install --no-audit
 
       - name: Run ESLint
         run: |
-          cd ${{ matrix.service }}
+          cd e-com_backend/${{ matrix.service }}
           npx eslint . --ext .js --quiet
 
       - name: Run Prettier Check
         run: |
-          cd ${{ matrix.service }}
+          cd e-com_backend/${{ matrix.service }}
           npx prettier --check .
 
       - name: Run Unit Tests (Jest) with 90% Coverage Threshold
         env:
-          # Inject dummies for test run compilation if needed
           DYNAMODB_TABLE_NAME: dummy-table
           COGNITO_USER_POOL_ID: dummy-pool
           COGNITO_CLIENT_ID: dummy-client
         run: |
-          cd ${{ matrix.service }}
+          cd e-com_backend/${{ matrix.service }}
           npm run test:coverage -- --passWithNoTests --coverageThreshold='{"global":{"statements":90,"branches":90,"functions":90,"lines":90}}'
 
       - name: Run Security Vulnerability Audit
         run: |
-          cd ${{ matrix.service }}
+          cd e-com_backend/${{ matrix.service }}
           npm audit --audit-level=high || echo "Vulnerabilities found, check audit log for details."
 
       - name: Package Serverless Application
@@ -148,5 +149,5 @@ jobs:
           USER_SERVICE_URL: dummy-users
           SNS_TOPIC_ARN: arn:aws:sns:ap-southeast-1:123456789012:dummy-topic
         run: |
-          cd ${{ matrix.service }}
+          cd e-com_backend/${{ matrix.service }}
           npx serverless@3 package --stage dev

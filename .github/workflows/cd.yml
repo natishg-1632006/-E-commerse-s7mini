@@ -34,18 +34,18 @@ jobs:
         uses: dorny/paths-filter@v3
         with:
           filters: |
-            user-service: 'user-service/**'
-            category-service: 'category-service/**'
-            product-service: 'product-service/**'
-            inventory-service: 'inventory-service/**'
-            coupon-service: 'coupon-service/**'
-            cart-service: 'cart-service/**'
-            order-service: 'order-service/**'
-            payment-service: 'payment-service/**'
-            analytics-service: 'analytics-service/**'
-            cognito-trigger-service: 'cognito-trigger-service/**'
-            notification-service: 'notification-service/**'
-            wishlist-review-service: 'wishlist-review-service/**'
+            user-service: 'e-com_backend/user-service/**'
+            category-service: 'e-com_backend/category-service/**'
+            product-service: 'e-com_backend/product-service/**'
+            inventory-service: 'e-com_backend/inventory-service/**'
+            coupon-service: 'e-com_backend/coupon-service/**'
+            cart-service: 'e-com_backend/cart-service/**'
+            order-service: 'e-com_backend/order-service/**'
+            payment-service: 'e-com_backend/payment-service/**'
+            analytics-service: 'e-com_backend/analytics-service/**'
+            cognito-trigger-service: 'e-com_backend/cognito-trigger-service/**'
+            notification-service: 'e-com_backend/notification-service/**'
+            wishlist-review-service: 'e-com_backend/wishlist-review-service/**'
 
   deploy-user-service:
     needs: detect-changes
@@ -228,7 +228,6 @@ jobs:
           echo "\`${{ needs.detect-changes.outputs.changed-list }}\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Extract deployment results
           USER_RES="${{ needs.deploy-user-service.result }}"
           CAT_RES="${{ needs.deploy-category-service.result }}"
           PROD_RES="${{ needs.deploy-product-service.result }}"
@@ -259,7 +258,6 @@ jobs:
           echo "| wishlist-review-service | \`${WISH_RES:-skipped}\` |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           
-          # Compute overall status
           if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
             echo "### :x: Deployment Status: FAILED" >> $GITHUB_STEP_SUMMARY
             exit 1
