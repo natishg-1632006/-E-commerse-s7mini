@@ -66,8 +66,15 @@ jobs:
         run: |
           cd e-com_backend/${{ inputs.service-name }}
           
-          echo "Searching for Lambda function containing '${{ inputs.service-name }}'..."
-          FUNCTION_NAME=$(aws lambda list-functions --query "Functions[?contains(FunctionName, '${{ inputs.service-name }}')].FunctionName" --output text | awk '{print $1}')
+          # 1. Try reading custom mapping from lambda_mapping.json
+          FUNCTION_NAME=$(node -e "try { const map = require('../../lambda_mapping.json'); console.log(map['${{ inputs.service-name }}'] || ''); } catch(e) { console.log(''); }")
+          
+          if [ -n "$FUNCTION_NAME" ]; then
+            echo "Mapped service '${{ inputs.service-name }}' to Lambda function: $FUNCTION_NAME (from lambda_mapping.json)"
+          else
+            echo "No mapping found in lambda_mapping.json. Searching for function containing '${{ inputs.service-name }}'..."
+            FUNCTION_NAME=$(aws lambda list-functions --query "Functions[?contains(FunctionName, '${{ inputs.service-name }}')].FunctionName" --output text | awk '{print $1}')
+          fi
           
           if [ -z "$FUNCTION_NAME" ]; then
             SLS_SERVICE=$(grep -E "^service:" serverless.yml | awk '{print $2}' | tr -d '\r')

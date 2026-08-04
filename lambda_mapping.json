@@ -1,0 +1,14 @@
+{
+  "user-service": "natish_test_user_service-dev-app",
+  "category-service": "natish_test_category_service-dev-app",
+  "product-service": "natish_test_product_service-dev-app",
+  "inventory-service": "natish_test_inventory_service-dev-app",
+  "coupon-service": "natish_test_coupon_service-dev-app",
+  "cart-service": "natish_test_cart_service-dev-app",
+  "order-service": "natish_test_order_service-dev-app",
+  "payment-service": "natish_test_payment_service-dev-app",
+  "analytics-service": "natish_test_analytics_service-dev-app",
+  "cognito-trigger-service": "natish_test_cognito_trigger_service-dev-app",
+  "notification-service": "natish_test_notification_service-dev-app",
+  "wishlist-review-service": "natish_test_wishlist_review_service-dev-app"
+}
