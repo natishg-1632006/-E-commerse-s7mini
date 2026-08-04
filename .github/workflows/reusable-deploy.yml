@@ -59,6 +59,12 @@ jobs:
             exit 1
           fi
 
+      - name: Configure AWS Profile
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile Natish
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile Natish
+          aws configure set region ${{ secrets.AWS_REGION }} --profile Natish
+
       - name: Deploy Service
         id: deploy-step
         env:
