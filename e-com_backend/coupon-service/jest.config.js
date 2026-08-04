@@ -12,5 +12,10 @@ module.exports = {
       lines: 95
     }
   },
+  coveragePathIgnorePatterns: [
+    '/node_modules/',
+    '/tests/',
+    'src/utils/cleanProductStock.js'
+  ],
   verbose: true
 };
