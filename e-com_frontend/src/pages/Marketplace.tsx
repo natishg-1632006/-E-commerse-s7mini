@@ -115,6 +115,23 @@ export const Marketplace: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedRam, setSelectedRam] = useState<string[]>([]);
   const [selectedStorage, setSelectedStorage] = useState<string[]>([]);
+  const [selectedSpecs, setSelectedSpecs] = useState<Record<string, string[]>>({});
+
+  const handleSpecChange = (key: string, value: string) => {
+    setSelectedSpecs((prev) => {
+      const current = prev[key] || [];
+      const updated = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+      const newSpecs = { ...prev, [key]: updated };
+      if (newSpecs[key].length === 0) {
+        delete newSpecs[key];
+      }
+      return newSpecs;
+    });
+    setCurrentPage(1);
+  };
+
   const [sortBy, setSortBy] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -275,6 +292,56 @@ export const Marketplace: React.FC = () => {
     return Array.from(new Set(storages)).sort() as string[];
   }, [categoryProducts]);
 
+  const dynamicSpecOptions = useMemo(() => {
+    const specsMap: Record<string, Set<string>> = {};
+    categoryProducts.forEach((p) => {
+      if (p.specifications && typeof p.specifications === 'object') {
+        Object.entries(p.specifications).forEach(([key, value]) => {
+          if (!value || typeof value !== 'string') return;
+          const normKey = key.trim().toLowerCase();
+          // Skip RAM and Storage since they have dedicated filters
+          if (normKey === 'ram' || normKey === 'storage') return;
+          // Filter out description keys (like Ports, Battery, Security) by checking length
+          if (value.length > 25) return;
+          
+          const originalKey = key.trim();
+          if (!specsMap[originalKey]) {
+            specsMap[originalKey] = new Set<string>();
+          }
+          specsMap[originalKey].add(value.trim());
+        });
+      }
+    });
+
+    const result: Record<string, string[]> = {};
+    Object.entries(specsMap).forEach(([key, valueSet]) => {
+      const values = Array.from(valueSet).sort();
+      // Keep keys that have at least 2 unique values and at most 8 unique values
+      if (values.length >= 2 && values.length <= 8) {
+        result[key] = values;
+      }
+    });
+    return result;
+  }, [categoryProducts]);
+
+  const priceLimits = useMemo(() => {
+    if (categoryProducts.length === 0) {
+      return { min: 0, max: 400000 };
+    }
+    const prices = categoryProducts.map((p) => p.price);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    return {
+      min,
+      max: max === min ? min + 1000 : max,
+    };
+  }, [categoryProducts]);
+
+  useEffect(() => {
+    setMinPrice(priceLimits.min);
+    setMaxPrice(priceLimits.max);
+  }, [priceLimits]);
+
   // Filter and sort products locally
   const filteredProducts = useMemo(() => {
     let result = [...categoryProducts];
@@ -300,6 +367,18 @@ export const Marketplace: React.FC = () => {
       });
     }
 
+    // Dynamic specifications filter
+    if (Object.keys(selectedSpecs).length > 0) {
+      Object.entries(selectedSpecs).forEach(([key, selectedValues]) => {
+        if (selectedValues && selectedValues.length > 0) {
+          result = result.filter((p) => {
+            const specVal = p.specifications?.[key];
+            return specVal && selectedValues.includes(specVal.trim());
+          });
+        }
+      });
+    }
+
     // Price range filter
     result = result.filter((p) => p.price >= minPrice && p.price <= maxPrice);
 
@@ -318,7 +397,7 @@ export const Marketplace: React.FC = () => {
     }
 
     return result;
-  }, [categoryProducts, selectedBrands, selectedRam, selectedStorage, minPrice, maxPrice, sortBy]);
+  }, [categoryProducts, selectedBrands, selectedRam, selectedStorage, selectedSpecs, minPrice, maxPrice, sortBy]);
 
   // Paginate local list
   const productsList = useMemo(() => {
@@ -392,8 +471,9 @@ export const Marketplace: React.FC = () => {
     setSelectedCategory(null);
     setSelectedRam([]);
     setSelectedStorage([]);
-    setMinPrice(0);
-    setMaxPrice(400000);
+    setSelectedSpecs({});
+    setMinPrice(priceLimits.min);
+    setMaxPrice(priceLimits.max);
     setSearchQuery('');
     toast.success('All filters cleared!');
   };
@@ -458,9 +538,10 @@ export const Marketplace: React.FC = () => {
     selectedCategory !== null ||
     selectedRam.length > 0 ||
     selectedStorage.length > 0 ||
+    Object.keys(selectedSpecs).length > 0 ||
     searchQuery !== '' ||
-    minPrice > 0 ||
-    maxPrice < 400000;
+    minPrice > priceLimits.min ||
+    maxPrice < priceLimits.max;
 
   const renderFilters = () => (
     <div className="flex flex-col items-stretch space-y-5.5">
@@ -515,10 +596,10 @@ export const Marketplace: React.FC = () => {
           <div className="relative flex-1 h-[34px]">
             <input
               type="number"
-              min="0"
-              max="400000"
+              min={priceLimits.min}
+              max={priceLimits.max}
               value={minPrice}
-              onChange={(e) => setMinPrice(Math.max(0, Number(e.target.value)))}
+              onChange={(e) => setMinPrice(Math.max(priceLimits.min, Number(e.target.value)))}
               placeholder="Min"
               className="w-full h-full text-[11px] font-semibold border border-slate-300 rounded-[10px] px-2.5 text-slate-700 outline-none focus:border-blue-600 transition-colors bg-slate-50/50"
             />
@@ -527,10 +608,10 @@ export const Marketplace: React.FC = () => {
           <div className="relative flex-1 h-[34px]">
             <input
               type="number"
-              min="0"
-              max="400000"
+              min={priceLimits.min}
+              max={priceLimits.max}
               value={maxPrice}
-              onChange={(e) => setMaxPrice(Math.min(400000, Number(e.target.value)))}
+              onChange={(e) => setMaxPrice(Math.min(priceLimits.max, Number(e.target.value)))}
               placeholder="Max"
               className="w-full h-full text-[11px] font-semibold border border-slate-300 rounded-[10px] px-2.5 text-slate-700 outline-none focus:border-blue-600 transition-colors bg-slate-50/50"
             />
@@ -543,26 +624,26 @@ export const Marketplace: React.FC = () => {
             <div
               className="absolute top-2 h-1 bg-blue-600 rounded-lg"
               style={{
-                left: `${(minPrice / 400000) * 100}%`,
-                right: `${100 - (maxPrice / 400000) * 100}%`,
+                left: `${((minPrice - priceLimits.min) / (priceLimits.max - priceLimits.min || 1)) * 100}%`,
+                right: `${100 - ((maxPrice - priceLimits.min) / (priceLimits.max - priceLimits.min || 1)) * 100}%`,
               }}
             ></div>
             <input
               type="range"
-              min="0"
-              max="400000"
+              min={priceLimits.min}
+              max={priceLimits.max}
               value={minPrice}
               onChange={(e) => {
                 const val = Math.min(Number(e.target.value), maxPrice - 50);
                 setMinPrice(val);
               }}
               className="absolute top-0 left-0 w-full h-5 appearance-none bg-transparent pointer-events-none cursor-pointer outline-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-600 [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:shadow-md [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-600 [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:shadow-md"
-              style={{ zIndex: minPrice > 200000 ? 5 : 4 }}
+              style={{ zIndex: minPrice > (priceLimits.min + priceLimits.max) / 2 ? 5 : 4 }}
             />
             <input
               type="range"
-              min="0"
-              max="400000"
+              min={priceLimits.min}
+              max={priceLimits.max}
               value={maxPrice}
               onChange={(e) => {
                 const val = Math.max(Number(e.target.value), minPrice + 50);
@@ -579,10 +660,10 @@ export const Marketplace: React.FC = () => {
       </div>
 
       {/* Memory RAM Specifications */}
-      <div className="flex flex-col items-start space-y-2.5">
-        <span className="text-[11px] font-bold text-slate-800 tracking-tight">Memory (RAM)</span>
-        {availableRam.length > 0 ? (
-          availableRam.map((ram) => (
+      {availableRam.length > 0 && (
+        <div className="flex flex-col items-start space-y-2.5">
+          <span className="text-[11px] font-bold text-slate-800 tracking-tight">Memory (RAM)</span>
+          {availableRam.map((ram) => (
             <Checkbox
               key={ram}
               id={`ram-${ram.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
@@ -590,17 +671,15 @@ export const Marketplace: React.FC = () => {
               onChange={() => handleRamChange(ram)}
               label={ram}
             />
-          ))
-        ) : (
-          <span className="text-[10.5px] font-medium text-slate-400 pl-1 italic">No RAM options available</span>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Storage Specifications */}
-      <div className="flex flex-col items-start space-y-2.5">
-        <span className="text-[11px] font-bold text-slate-800 tracking-tight">Storage Space</span>
-        {availableStorage.length > 0 ? (
-          availableStorage.map((st) => (
+      {availableStorage.length > 0 && (
+        <div className="flex flex-col items-start space-y-2.5">
+          <span className="text-[11px] font-bold text-slate-800 tracking-tight">Storage Space</span>
+          {availableStorage.map((st) => (
             <Checkbox
               key={st}
               id={`storage-${st.toLowerCase().replace(/[^a-z0-9]/g, '')}`}
@@ -608,11 +687,29 @@ export const Marketplace: React.FC = () => {
               onChange={() => handleStorageChange(st)}
               label={st}
             />
-          ))
-        ) : (
-          <span className="text-[10.5px] font-medium text-slate-400 pl-1 italic">No storage options available</span>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Dynamic Specifications */}
+      {Object.entries(dynamicSpecOptions).map(([specKey, options]) => (
+        <div key={specKey} className="flex flex-col items-start space-y-2.5">
+          <span className="text-[11px] font-bold text-slate-800 tracking-tight">{specKey}</span>
+          {options.map((option) => {
+            const uniqueId = `spec-${specKey.toLowerCase().replace(/[^a-z0-9]/g, '')}-${option.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+            const isChecked = selectedSpecs[specKey]?.includes(option) || false;
+            return (
+              <Checkbox
+                key={option}
+                id={uniqueId}
+                checked={isChecked}
+                onChange={() => handleSpecChange(specKey, option)}
+                label={option}
+              />
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 
