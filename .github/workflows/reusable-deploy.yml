@@ -1,0 +1,70 @@
+name: Reusable Deploy
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        required: true
+        type: string
+      stage:
+        required: false
+        type: string
+        default: 'dev'
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_REGION:
+        required: true
+      AWS_SESSION_TOKEN:
+        required: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Cache service npm dependencies
+      - name: Cache Node Modules
+        id: npm-cache
+        uses: actions/cache@v4
+        with:
+          path: e-com_backend/${{ inputs.service-name }}/node_modules
+          key: ${{ runner.os }}-npm-production-${{ inputs.service-name }}-${{ hashFiles(format('e-com_backend/{0}/package-lock.json', inputs.service-name)) }}
+          restore-keys: |
+            ${{ runner.os }}-npm-production-${{ inputs.service-name }}-
+
+      - name: Install Production Dependencies
+        if: steps.npm-cache.outputs.cache-hit != 'true'
+        run: |
+          cd e-com_backend/${{ inputs.service-name }}
+          npm ci --omit=dev
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Package Service as Zip
+        run: |
+          cd e-com_backend/${{ inputs.service-name }}
+          # Create zip file containing only production files
+          zip -q -r deploy.zip src node_modules lambda.js package.json
+
+      - name: Deploy to AWS Lambda
+        run: |
+          cd e-com_backend/${{ inputs.service-name }}
+          echo "Deploying zip to Lambda function: ${{ inputs.service-name }}-${{ inputs.stage }}-app"
+          aws lambda update-function-code --function-name ${{ inputs.service-name }}-${{ inputs.stage }}-app --zip-file fileb://deploy.zip
+          echo "Deployment successful!"
