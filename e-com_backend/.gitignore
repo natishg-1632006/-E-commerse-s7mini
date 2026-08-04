@@ -18,9 +18,9 @@ yarn-debug.log*
 yarn-error.log*
 
 # ─── Package Lock (optional — remove if you want to commit lock files) ───────
-package-lock.json
-**/package-lock.json
-yarn.lock
+# package-lock.json
+# **/package-lock.json
+# yarn.lock
 
 # ─── OS Files ────────────────────────────────────────────────────────────────
 .DS_Store
