@@ -10,6 +10,10 @@ const brandRoutes = require('./routes/brandRoutes');
 
 const app = express();
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'UP', service: process.env.SERVICE_NAME || 'wishlist-review-service', timestamp: new Date().toISOString() });
+});
+
 app.use(helmet());
 app.use(compression());
 app.use(cors());

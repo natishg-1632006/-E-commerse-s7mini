@@ -1,12 +1,17 @@
 {
-  "name": "product-service",
+  "name": "category-service",
   "version": "1.0.0",
   "description": "Product Microservice for Tech E-Commerce Platform",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "clean:stock": "node src/utils/cleanProductStock.js"
+    "clean:stock": "node src/utils/cleanProductStock.js",
+    "test": "jest",
+    "test:coverage": "jest --coverage --detectOpenHandles --forceExit",
+    "test:watch": "jest --watch",
+    "lint": "eslint . --quiet",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1075.0",
@@ -27,6 +32,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.4",
-    "serverless": "^4.38.1"
+    "serverless": "^4.38.1",
+    "jest": "^29.5.0",
+    "supertest": "^6.3.3"
   }
 }

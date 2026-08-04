@@ -10,6 +10,10 @@ const errorHandler = require('./middleware/errorMiddleware');
 
 const app = express();
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'UP', service: process.env.SERVICE_NAME || 'order-service', timestamp: new Date().toISOString() });
+});
+
 app.use(helmet());
 app.use(compression());
 app.use(cors());

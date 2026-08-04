@@ -1,0 +1,152 @@
+name: Microservices CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      has-changes: ${{ steps.filter.outputs.changes != '[]' }}
+      changes: ${{ steps.filter.outputs.changes }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Filter Paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            analytics-service: 'analytics-service/**'
+            cart-service: 'cart-service/**'
+            category-service: 'category-service/**'
+            cognito-trigger-service: 'cognito-trigger-service/**'
+            coupon-service: 'coupon-service/**'
+            inventory-service: 'inventory-service/**'
+            notification-service: 'notification-service/**'
+            order-service: 'order-service/**'
+            payment-service: 'payment-service/**'
+            product-service: 'product-service/**'
+            user-service: 'user-service/**'
+            wishlist-review-service: 'wishlist-review-service/**'
+
+  validate:
+    needs: detect-changes
+    if: ${{ needs.detect-changes.outputs.has-changes == 'true' }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.changes) }}
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Cache service npm dependencies
+      - name: Cache Service Node Modules
+        id: service-npm-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.service }}/node_modules
+          key: ${{ runner.os }}-npm-${{ matrix.service }}-${{ hashFiles(format('{0}/package-lock.json', matrix.service)) }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ matrix.service }}-
+
+      - name: Install Service Dependencies
+        if: steps.service-npm-cache.outputs.cache-hit != 'true'
+        run: |
+          cd ${{ matrix.service }}
+          npm ci
+
+      - name: Verify package-lock.json
+        run: |
+          cd ${{ matrix.service }}
+          if [ ! -f package-lock.json ]; then
+            echo "Error: package-lock.json is missing!"
+            exit 1
+          fi
+
+      # Cache root node_modules for ESLint and Prettier
+      - name: Cache Root Node Modules
+        id: root-npm-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-root-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-root-npm-
+
+      - name: Install Root Quality Tools
+        if: steps.root-npm-cache.outputs.cache-hit != 'true'
+        run: npm install --no-audit
+
+      - name: Run ESLint
+        run: |
+          cd ${{ matrix.service }}
+          npx eslint . --ext .js --quiet
+
+      - name: Run Prettier Check
+        run: |
+          cd ${{ matrix.service }}
+          npx prettier --check .
+
+      - name: Run Unit Tests (Jest) with 90% Coverage Threshold
+        env:
+          # Inject dummies for test run compilation if needed
+          DYNAMODB_TABLE_NAME: dummy-table
+          COGNITO_USER_POOL_ID: dummy-pool
+          COGNITO_CLIENT_ID: dummy-client
+        run: |
+          cd ${{ matrix.service }}
+          npm run test:coverage -- --passWithNoTests --coverageThreshold='{"global":{"statements":90,"branches":90,"functions":90,"lines":90}}'
+
+      - name: Run Security Vulnerability Audit
+        run: |
+          cd ${{ matrix.service }}
+          npm audit --audit-level=high || echo "Vulnerabilities found, check audit log for details."
+
+      - name: Package Serverless Application
+        env:
+          AWS_ACCESS_KEY_ID: "dummy"
+          AWS_SECRET_ACCESS_KEY: "dummy"
+          AWS_REGION: "ap-southeast-1"
+          SERVICE_NAME: ${{ matrix.service }}
+          DYNAMODB_TABLE_NAME: dummy-table
+          COGNITO_USER_POOL_ID: dummy-pool
+          COGNITO_CLIENT_ID: dummy-client
+          SMTP_HOST: dummy-host
+          SMTP_PORT: 587
+          SMTP_SECURE: "false"
+          SMTP_USER: dummy-user
+          SMTP_PASS: dummy-pass
+          SMTP_FROM: dummy-from
+          NOTIFICATION_OWNER_EMAIL: dummy-owner
+          NOTIFICATION_QUEUE_ARN: arn:aws:sqs:ap-southeast-1:123456789012:dummy-queue
+          DYNAMODB_WISHLISTS_TABLE: dummy-wishlists
+          DYNAMODB_REVIEWS_TABLE: dummy-reviews
+          DYNAMODB_BRANDS_TABLE: dummy-brands
+          ORDER_SERVICE_URL: dummy-orders
+          COUPON_TABLE: dummy-coupons
+          INVENTORY_TABLE: dummy-inventory
+          PRODUCTS_TABLE: dummy-products
+          CARTS_TABLE: dummy-carts
+          INTERNAL_SERVICE_KEY: dummy-key
+          PAYMENTS_TABLE: dummy-payments
+          SALES_TABLE: dummy-sales
+          COUPON_SERVICE_URL: dummy-coupons
+          INVENTORY_SERVICE_URL: dummy-inventory
+          PRODUCT_SERVICE_URL: dummy-products
+          USER_SERVICE_URL: dummy-users
+          SNS_TOPIC_ARN: arn:aws:sns:ap-southeast-1:123456789012:dummy-topic
+        run: |
+          cd ${{ matrix.service }}
+          npx serverless@3 package --stage dev

@@ -187,7 +187,7 @@ const createOrder = async (userId, email, shippingAddress, paymentMethod, token,
   );
 
   const subtotal = parseFloat(
-    enrichedItems.reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)
+    enrichedItems.filter(Boolean).reduce((sum, item) => sum + item.subtotal, 0).toFixed(2)
   );
 
   let discountAmount = 0;
@@ -584,10 +584,11 @@ const processPaymentEvent = async ({ eventType, eventId, message }) => {
       paymentStatus = PAYMENT_STATUS.REFUNDED;
       orderStatus = ORDER_STATUS.CANCELLED;
       break;
-    default:
+    default: {
       const err = new Error(`Unsupported payment event type: ${eventType}`);
       err.statusCode = 400;
       throw err;
+    }
   }
 
   console.log('[Order] Updating order', { orderId: message.orderId, eventType });
@@ -1017,4 +1018,5 @@ module.exports = {
   cancelOrder,
   processPaymentEvent,
   generateInvoicePdf,
+  appendProcessedEvent,
 };
