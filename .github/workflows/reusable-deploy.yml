@@ -65,6 +65,24 @@ jobs:
       - name: Deploy to AWS Lambda
         run: |
           cd e-com_backend/${{ inputs.service-name }}
-          echo "Deploying zip to Lambda function: ${{ inputs.service-name }}-${{ inputs.stage }}-app"
-          aws lambda update-function-code --function-name ${{ inputs.service-name }}-${{ inputs.stage }}-app --zip-file fileb://deploy.zip
+          
+          echo "Searching for Lambda function containing '${{ inputs.service-name }}'..."
+          FUNCTION_NAME=$(aws lambda list-functions --query "Functions[?contains(FunctionName, '${{ inputs.service-name }}')].FunctionName" --output text | awk '{print $1}')
+          
+          if [ -z "$FUNCTION_NAME" ]; then
+            SLS_SERVICE=$(grep -E "^service:" serverless.yml | awk '{print $2}' | tr -d '\r')
+            echo "No function found containing '${{ inputs.service-name }}'. Trying serverless.yml service name: \${SLS_SERVICE}..."
+            FUNCTION_NAME=$(aws lambda list-functions --query "Functions[?contains(FunctionName, '\${SLS_SERVICE}')].FunctionName" --output text | awk '{print $1}')
+          fi
+
+          if [ -z "$FUNCTION_NAME" ]; then
+            echo "=== ERROR: No Lambda function found for service '${{ inputs.service-name }}' ==="
+            echo "List of available Lambda functions in your account:"
+            aws lambda list-functions --query "Functions[*].FunctionName" --output table
+            exit 1
+          fi
+
+          echo "Found Lambda function to deploy: $FUNCTION_NAME"
+          echo "Deploying zip to Lambda function: $FUNCTION_NAME"
+          aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://deploy.zip
           echo "Deployment successful!"
