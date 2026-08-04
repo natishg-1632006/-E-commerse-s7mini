@@ -1,14 +1,14 @@
 {
-  "user-service": "natish_test_user_service-dev-app",
-  "category-service": "natish_test_category_service-dev-app",
-  "product-service": "natish_test_product_service-dev-app",
-  "inventory-service": "natish_test_inventory_service-dev-app",
-  "coupon-service": "natish_test_coupon_service-dev-app",
-  "cart-service": "natish_test_cart_service-dev-app",
-  "order-service": "natish_test_order_service-dev-app",
-  "payment-service": "natish_test_payment_service-dev-app",
-  "analytics-service": "natish_test_analytics_service-dev-app",
-  "cognito-trigger-service": "natish_test_cognito_trigger_service-dev-app",
-  "notification-service": "natish_test_notification_service-dev-app",
-  "wishlist-review-service": "natish_test_wishlist_review_service-dev-app"
+  "user-service": "natish_user_service_lambda",
+  "category-service": "natish_category_service_lambda",
+  "product-service": "natish_product_service_lambda",
+  "inventory-service": "natish_inventory_service_lambda",
+  "coupon-service": "natish_coupon_service",
+  "cart-service": "natish_cart_service_lambda",
+  "order-service": "natish_order_service_lambda",
+  "payment-service": "natish_payment_service_lambda",
+  "analytics-service": "natish_analytics_service_lambda",
+  "cognito-trigger-service": "natish_cognito-trigger-service_lambda",
+  "notification-service": "natish_notification_service_lambda",
+  "wishlist-review-service": "natish_wishlist_review_service_lambda"
 }
