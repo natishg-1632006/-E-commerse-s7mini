@@ -108,3 +108,21 @@ jobs:
         run: |
           cd e-com_backend/${{ matrix.service }}
           npm audit --audit-level=high || echo "Vulnerabilities found, check audit log for details."
+
+      - name: Install Snyk CLI
+        run: npm install -g snyk
+
+      - name: Run Snyk Security Scan & Generate HTML Report
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_KEY }}
+        run: |
+          cd e-com_backend/${{ matrix.service }}
+          snyk test --json --severity-threshold=high > snyk_report.json || true
+          npx snyk-to-html -i snyk_report.json -o snyk-report-${{ matrix.service }}.html
+
+      - name: Upload Snyk Security Report
+        uses: actions/upload-artifact@v4
+        with:
+          name: snyk-report-${{ matrix.service }}
+          path: e-com_backend/${{ matrix.service }}/snyk-report-${{ matrix.service }}.html
+          if-no-files-found: ignore
