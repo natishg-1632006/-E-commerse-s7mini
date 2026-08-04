@@ -3,6 +3,9 @@ service: order-service
 frameworkVersion: "3"
 
 provider:
+  tracing:
+    lambda: true
+    apiGateway: true
   name: aws
   runtime: nodejs22.x
   region: ap-southeast-1

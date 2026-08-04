@@ -92,4 +92,6 @@ jobs:
           echo "Found Lambda function to deploy: $FUNCTION_NAME"
           echo "Deploying zip to Lambda function: $FUNCTION_NAME"
           aws lambda update-function-code --function-name $FUNCTION_NAME --zip-file fileb://deploy.zip
+          echo "Enabling active X-Ray tracing for: $FUNCTION_NAME"
+          aws lambda update-function-configuration --function-name $FUNCTION_NAME --tracing-config Mode=Active
           echo "Deployment successful!"
