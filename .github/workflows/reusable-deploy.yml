@@ -102,7 +102,13 @@ jobs:
         id: extract-endpoint
         if: ${{ inputs.verify-health }}
         run: |
-          node .github/scripts/parse_endpoint.js e-com_backend/${{ inputs.service-name }}/deploy.log
+          if ! node .github/scripts/parse_endpoint.js e-com_backend/${{ inputs.service-name }}/deploy.log; then
+            echo "=========================================="
+            echo "      SERVERLESS DEPLOYMENT LOGS          "
+            echo "=========================================="
+            cat e-com_backend/${{ inputs.service-name }}/deploy.log
+            exit 1
+          fi
 
       - name: Verify Health Check (GET /health)
         if: ${{ inputs.verify-health }}
