@@ -2,7 +2,7 @@ name: Microservices CD
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
 
 concurrency:
   group: deploy-production
