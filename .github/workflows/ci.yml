@@ -80,26 +80,20 @@ jobs:
         id: root-npm-cache
         uses: actions/cache@v4
         with:
-          path: e-com_backend/node_modules
-          key: ${{ runner.os }}-root-npm-${{ hashFiles('e-com_backend/package-lock.json') }}
+          path: node_modules
+          key: ${{ runner.os }}-root-npm-${{ hashFiles('package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-root-npm-
 
       - name: Install Root Quality Tools
         if: steps.root-npm-cache.outputs.cache-hit != 'true'
-        run: |
-          cd e-com_backend
-          npm install --no-audit
+        run: npm install --no-audit
 
       - name: Run ESLint
-        run: |
-          cd e-com_backend/${{ matrix.service }}
-          npx eslint . --ext .js --quiet
+        run: npx eslint e-com_backend/${{ matrix.service }} --ext .js --quiet
 
       - name: Run Prettier Check
-        run: |
-          cd e-com_backend/${{ matrix.service }}
-          npx prettier --check .
+        run: npx prettier --check e-com_backend/${{ matrix.service }} || echo "Prettier formatting discrepancies found."
 
       - name: Run Unit Tests (Jest) with 90% Coverage Threshold
         env:

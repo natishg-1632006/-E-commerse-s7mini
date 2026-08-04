@@ -1,0 +1,15 @@
+{
+  "name": "e-com-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "lint:all": "eslint . --ext .js --quiet",
+    "format:all": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "eslint-plugin-jest": "^27.9.0",
+    "prettier": "^3.2.5"
+  }
+}

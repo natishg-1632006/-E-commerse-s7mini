@@ -1,7 +1,0 @@
-node_modules/
-coverage/
-package-lock.json
-dist/
-build/
-.serverless/
-deploy.log
