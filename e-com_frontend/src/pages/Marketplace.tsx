@@ -15,9 +15,6 @@ import {
   ArrowUpDown,
   ChevronDown,
   Check,
-  Laptop,
-  Headphones,
-  Watch,
   Sparkles,
   Truck,
   ShoppingBag,
@@ -42,6 +39,134 @@ const formatCategoryName = (name: string) => {
     .split(' ')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+};
+
+const CategoryIcon: React.FC<{ name: string; isActive: boolean }> = ({ name, isActive }) => {
+  const norm = name.toLowerCase();
+
+  // 1. For You / Shopping Bag
+  if (norm === 'all' || norm.includes('all') || norm.includes('for you')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 8V7C6 4.79086 7.79086 3 10 3C12.2091 3 14 4.79086 14 7V8" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+        <rect x="4" y="8" width="12" height="12" rx="3" stroke="#1E293B" strokeWidth="1.8" fill={isActive ? "#EFF6FF" : "#F8FAFC"}/>
+        <path d="M4 14C4 11.5 6 9.5 10 9.5C14 9.5 16 11.5 16 14" fill="#FACC15"/>
+        <path d="M4 14C4 11.5 6 9.5 10 9.5C14 9.5 16 11.5 16 14" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    );
+  }
+
+  // 2. Computing / Laptop
+  if (norm.includes('computing') || norm.includes('laptop') || norm.includes('computer')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="5" width="16" height="11" rx="2" stroke="#1E293B" strokeWidth="1.8"/>
+        <path d="M2 18H22" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M5 16L3 18" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M19 16L21 18" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M2 18H22L20 16H4L2 18Z" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8" strokeLinejoin="round"/>
+      </svg>
+    );
+  }
+
+  // 3. Audio / Headphones
+  if (norm.includes('audio') || norm.includes('headphone') || norm.includes('buds') || norm.includes('sound')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 14C3 9.02944 7.02944 5 12 5C16.9706 5 21 9.02944 21 14" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+        <rect x="2" y="12" width="4" height="7" rx="2" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8"/>
+        <rect x="18" y="12" width="4" height="7" rx="2" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8"/>
+      </svg>
+    );
+  }
+
+  // 4. Wearables / Smartwatch
+  if (norm.includes('wear') || norm.includes('watch')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="7" y="7" width="10" height="10" rx="3" stroke="#1E293B" strokeWidth="1.8"/>
+        <path d="M9 7V3C9 2.5 9.5 2 10 2H14C14.5 2 15 2.5 15 3V7" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M9 17V21C9 21.5 9.5 22 10 22H14C14.5 22 15 21.5 15 21V17" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+        <circle cx="12" cy="12" r="3" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8"/>
+      </svg>
+    );
+  }
+
+  // 5. Mobiles / Smartphone
+  if (norm.includes('mobile') || norm.includes('phone') || norm.includes('smartphone')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="3" width="12" height="18" rx="3" stroke="#1E293B" strokeWidth="1.8"/>
+        <rect x="8" y="16" width="8" height="3" rx="1" fill="#FACC15" stroke="#1E293B" strokeWidth="1.5"/>
+        <line x1="11" y1="5" x2="13" y2="5" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+      </svg>
+    );
+  }
+
+  // 6. Fashion
+  if (norm.includes('fashion') || norm.includes('cloth') || norm.includes('apparel')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 3H15L21 7V10L18 11V21H6V11L3 10V7L9 3Z" stroke="#1E293B" strokeWidth="1.8" strokeLinejoin="round"/>
+        <path d="M6 17H18V21H6V17Z" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8"/>
+        <path d="M9 3C9 4.5 10 5.5 12 5.5C14 5.5 15 4.5 15 3" stroke="#1E293B" strokeWidth="1.8"/>
+      </svg>
+    );
+  }
+
+  // 7. Home
+  if (norm.includes('home') || norm.includes('decor') || norm.includes('lamp')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L3 9V21H21V9L12 2Z" stroke="#1E293B" strokeWidth="1.8" strokeLinejoin="round"/>
+        <path d="M12 2L3 9H21L12 2Z" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8" strokeLinejoin="round"/>
+        <rect x="10" y="14" width="4" height="7" stroke="#1E293B" strokeWidth="1.8"/>
+      </svg>
+    );
+  }
+
+  // 8. Appliances / TV
+  if (norm.includes('appliance') || norm.includes('tv') || norm.includes('television')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="4" width="18" height="12" rx="2" stroke="#1E293B" strokeWidth="1.8"/>
+        <path d="M8 20H16" stroke="#1E293B" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M12 16V20" stroke="#1E293B" strokeWidth="1.8"/>
+        <path d="M3 14H21V16H3V14Z" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8"/>
+      </svg>
+    );
+  }
+
+  // 9. Toys
+  if (norm.includes('toy') || norm.includes('baby')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="13" r="6" stroke="#1E293B" strokeWidth="1.8"/>
+        <circle cx="7" cy="6" r="3" stroke="#1E293B" strokeWidth="1.8"/>
+        <circle cx="17" cy="6" r="3" stroke="#1E293B" strokeWidth="1.8"/>
+        <circle cx="12" cy="13" r="3" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8"/>
+      </svg>
+    );
+  }
+
+  // 10. Sports
+  if (norm.includes('sports') || norm.includes('fitness') || norm.includes('gym')) {
+    return (
+      <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 18L18 6" stroke="#1E293B" strokeWidth="2.5" strokeLinecap="round"/>
+        <circle cx="18" cy="6" r="2.5" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8"/>
+        <rect x="4" y="16" width="4" height="4" rx="1" stroke="#1E293B" strokeWidth="1.8"/>
+      </svg>
+    );
+  }
+
+  // Fallback: Sparkles with yellow center
+  return (
+    <svg className="w-5.5 h-5.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 3L14.5 9.5L21 12L14.5 14.5L12 21L9.5 14.5L3 12L9.5 9.5L12 3Z" stroke="#1E293B" strokeWidth="1.8" strokeLinejoin="round"/>
+      <circle cx="12" cy="12" r="2.5" fill="#FACC15" stroke="#1E293B" strokeWidth="1.8"/>
+    </svg>
+  );
 };
 
 const SkeletonProductCard: React.FC = () => {
@@ -122,6 +247,7 @@ export const Marketplace: React.FC = () => {
   const [showShopGrid, setShowShopGrid] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
+  const [brandsLoading, setBrandsLoading] = useState(true);
   const [trendingLoading, setTrendingLoading] = useState(true);
 
   // Price filter states
@@ -438,6 +564,7 @@ export const Marketplace: React.FC = () => {
   // Fetch brands for ticker on mount
   useEffect(() => {
     const fetchBrands = async () => {
+      setBrandsLoading(true);
       try {
         const list = await brandService.getAllBrands();
         if (list && list.length > 0) {
@@ -445,6 +572,8 @@ export const Marketplace: React.FC = () => {
         }
       } catch (err) {
         console.error('Error fetching brands for ticker:', err);
+      } finally {
+        setBrandsLoading(false);
       }
     };
     fetchBrands();
@@ -516,19 +645,6 @@ export const Marketplace: React.FC = () => {
     return getImageUrl(product);
   };
 
-  const getCategoryIcon = (name: string) => {
-    const norm = name.toLowerCase();
-    if (norm.includes('computing') || norm.includes('laptop') || norm.includes('pc') || norm.includes('computer')) {
-      return Laptop;
-    }
-    if (norm.includes('audio') || norm.includes('headphone') || norm.includes('sound') || norm.includes('speaker')) {
-      return Headphones;
-    }
-    if (norm.includes('wear') || norm.includes('watch') || norm.includes('smartwatch')) {
-      return Watch;
-    }
-    return Sparkles;
-  };
 
   const sortOptions = [
     { value: 'newest', label: 'Newest Arrivals' },
@@ -550,31 +666,7 @@ export const Marketplace: React.FC = () => {
 
   const renderFilters = () => (
     <div className="flex flex-col items-stretch space-y-5.5">
-      {/* Category List Filters */}
-      <div className="flex flex-col items-start space-y-2.5">
-        <span className="text-[11px] font-bold text-slate-800 tracking-tight">Category</span>
-        <button
-          onClick={() => setSelectedCategory(null)}
-          className={cn(
-            "text-[11.5px] font-bold py-0.5 transition-colors cursor-pointer text-left pl-1",
-            !selectedCategory ? "text-blue-600" : "text-slate-550 hover:text-slate-800"
-          )}
-        >
-          All Categories
-        </button>
-        {categoriesList.map((cat) => (
-          <button
-            key={cat.categoryId || cat.id}
-            onClick={() => setSelectedCategory(cat.name)}
-            className={cn(
-              "text-[11.5px] font-semibold py-0.5 transition-colors cursor-pointer text-left pl-1 flex items-center space-x-1.5",
-              selectedCategory === cat.name ? "text-blue-600 font-extrabold" : "text-slate-550 hover:text-slate-800"
-            )}
-          >
-            <span>{formatCategoryName(cat.name)}</span>
-          </button>
-        ))}
-      </div>
+      {/* Categories filter hidden (using top navbar categories instead) */}
 
       {/* Brand Filters */}
       <div className="flex flex-col items-start space-y-2.5">
@@ -741,6 +833,63 @@ export const Marketplace: React.FC = () => {
     return (
       <MainLayout>
         <div className="w-full flex flex-col items-stretch space-y-12 select-none">
+          {/* Horizontal Category Scroll Bar (Flipkart Style) */}
+          <div className="w-full bg-white border-b border-slate-100/70 py-1.5 select-none sticky top-16 z-40 -mt-8 mb-4 shadow-sm/5">
+            <div className="flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-2 sm:gap-4 md:gap-0 px-4 justify-start md:justify-center w-full">
+              {categoriesLoading ? (
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={idx} className="flex flex-col items-center space-y-1 flex-shrink-0 md:flex-shrink-0 w-[80px] sm:w-[95px] md:w-[16.6%] md:max-w-[16.6%] animate-pulse">
+                    <div className="w-7 h-7 rounded-lg bg-slate-100 border border-slate-200/30" />
+                    <div className="h-2 w-8 bg-slate-200 rounded" />
+                  </div>
+                ))
+              ) : (
+                <>
+                  {/* Categories from backend */}
+                  {categoriesList.map((cat) => {
+                    const isSelected = selectedCategory === cat.name;
+                    const imgUrl = getImageUrl(cat);
+                    return (
+                      <button
+                        key={cat.categoryId || cat.id}
+                        onClick={() => {
+                          setSelectedCategory(cat.name);
+                          setShowShopGrid(true);
+                        }}
+                        className="flex flex-col items-center space-y-1 group cursor-pointer focus:outline-none flex-shrink-0 md:flex-shrink-0 w-[80px] sm:w-[95px] md:w-[16.6%] md:max-w-[16.6%] border-none bg-transparent"
+                      >
+                        <div className={cn(
+                          "w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 border overflow-hidden",
+                          isSelected
+                            ? "bg-blue-50/60 border-blue-200/50 shadow-[0_4px_12px_rgba(37,99,235,0.05)] scale-105"
+                            : "bg-slate-50/40 border-slate-100/50 group-hover:border-slate-350 group-hover:bg-slate-50"
+                        )}>
+                          {imgUrl ? (
+                            <img src={imgUrl} alt={cat.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <CategoryIcon name={cat.name} isActive={isSelected} />
+                          )}
+                        </div>
+                        <div className="flex flex-col items-center">
+                          <span className={cn(
+                            "text-[9.5px] tracking-tight transition-colors font-bold",
+                            isSelected ? "text-slate-900" : "text-slate-500 group-hover:text-slate-800"
+                          )}>
+                            {formatCategoryName(cat.name)}
+                          </span>
+                          <div className={cn(
+                            "h-[2px] w-5 rounded-full mt-0.5 transition-all duration-300",
+                            isSelected ? "bg-blue-600" : "bg-transparent"
+                          )} />
+                        </div>
+                      </button>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          </div>
+
           {/* Hero Banner Section */}
           <section className="bg-slate-50/50 rounded-[32px] border border-slate-200/50 p-6 sm:p-10 lg:p-12 flex flex-col lg:flex-row items-center justify-between gap-8 text-left">
             <div className="flex-1 space-y-6">
@@ -777,80 +926,48 @@ export const Marketplace: React.FC = () => {
             </div>
           </section>
 
-          {/* Shop Categories Circles */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="text-left">
-                <h2 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight">
-                  <span className="hidden sm:inline">Shop by Category</span>
-                  <span className="inline sm:hidden">Shop Categories</span>
-                </h2>
-                <p className="text-xs text-slate-400 font-bold mt-0.5 hidden sm:block">
-                  Find exactly what you're looking for in our specialized collections.
-                </p>
-              </div>
-              <button
-                onClick={() => setShowShopGrid(true)}
-                className="text-xs font-black text-blue-600 hover:text-blue-800 flex items-center space-x-1 cursor-pointer bg-transparent border-none"
-              >
-                <span>View all</span>
-                <span>&rarr;</span>
-              </button>
-            </div>
 
-            <div className="grid grid-cols-3 gap-3.5 sm:gap-6">
-              {categoriesLoading ? (
-                Array.from({ length: 3 }).map((_, idx) => (
-                  <div key={idx} className="p-4 sm:p-6 bg-white border border-slate-200/60 rounded-[24px] sm:rounded-[32px] flex flex-col items-center justify-center space-y-3 shimmer-sweep">
-                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-slate-200 animate-pulse" />
-                    <div className="h-3 w-16 bg-slate-200 rounded animate-pulse" />
-                  </div>
-                ))
-              ) : (
-                categoriesList.slice(0, 3).map((cat) => {
-                  const IconComponent = getCategoryIcon(cat.name);
-                  const imgUrl = getImageUrl(cat);
-                  return (
-                    <button
-                      key={cat.categoryId || cat.id}
-                      onClick={() => {
-                        setSelectedCategory(cat.name);
-                        setShowShopGrid(true);
-                      }}
-                      className="p-4 sm:p-6 bg-white border border-slate-200/60 rounded-[24px] sm:rounded-[32px] flex flex-col items-center justify-center space-y-3 hover:border-blue-300 hover:shadow-md transition-all active:scale-98 cursor-pointer select-none"
-                    >
-                      <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 flex-shrink-0 overflow-hidden">
-                        {imgUrl ? (
-                          <img src={imgUrl} alt={cat.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <IconComponent className="w-5.5 h-5.5 sm:w-7 sm:h-7 text-slate-800" />
-                        )}
-                      </div>
-                      <span className="text-[11px] sm:text-xs font-black text-slate-800 tracking-tight leading-tight">
-                        {cat.name}
-                      </span>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </section>
 
           {/* Brands logo ticker */}
-          <section className="py-2 border-t border-b border-slate-100 flex flex-wrap items-center justify-around gap-y-4 gap-x-6 text-[10px] sm:text-[11px] font-black text-slate-350 tracking-[0.2em] uppercase select-none">
-            {dbBrands.length > 0 ? (
-              dbBrands.map((b) => <span key={b}>{b}</span>)
-            ) : (
-              <>
-                <span>Techcore</span>
-                <span>Quantum</span>
-                <span>Nexus</span>
-                <span>Aether</span>
-                <span>Zenith</span>
-                <span>Omega</span>
-              </>
-            )}
-          </section>
+          <style dangerouslySetInnerHTML={{__html: `
+            @keyframes marquee-ltr {
+              0% { transform: translateX(-50%); }
+              100% { transform: translateX(0%); }
+            }
+            .animate-marquee-ltr {
+              display: inline-flex;
+              animation: marquee-ltr 28s linear infinite;
+            }
+          `}} />
+          
+          {brandsLoading ? (
+            <section className="py-4 border-t border-b border-slate-100/70 select-none overflow-hidden">
+              <div className="flex items-center justify-around w-full max-w-7xl mx-auto px-4 gap-6 animate-pulse">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={idx} className="h-3 w-16 bg-slate-200 rounded-full" />
+                ))}
+              </div>
+            </section>
+          ) : dbBrands.length > 0 ? (
+            <section className="py-3.5 border-t border-b border-slate-100/70 select-none overflow-hidden w-full relative bg-slate-50/10">
+              <div className="w-full overflow-hidden whitespace-nowrap relative flex">
+                <div className="animate-marquee-ltr space-x-16 sm:space-x-24 pr-16 sm:pr-24 flex-shrink-0">
+                  {/* First iteration */}
+                  {dbBrands.map((b, idx) => (
+                    <span key={`b1-${b}-${idx}`} className="text-slate-350 tracking-[0.25em] font-black uppercase text-[10px] sm:text-[11.5px] hover:text-blue-500/60 transition-colors duration-300">
+                      {b}
+                    </span>
+                  ))}
+                  {/* Duplicate for seamless loop */}
+                  {dbBrands.map((b, idx) => (
+                    <span key={`b2-${b}-${idx}`} className="text-slate-350 tracking-[0.25em] font-black uppercase text-[10px] sm:text-[11.5px] hover:text-blue-500/60 transition-colors duration-300">
+                      {b}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </section>
+          ) : null}
 
           {/* Trending Today */}
           <section className="space-y-5 text-left">
@@ -951,7 +1068,19 @@ export const Marketplace: React.FC = () => {
                         <div className="border-t border-slate-100/80 my-3" />
                         <div className="flex items-center justify-between flex-shrink-0">
                           <div className="flex flex-col text-left">
-                            <Price value={prod.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
+                            {prod.discount && prod.discount > 0 ? (
+                              <>
+                                <div className="flex items-center space-x-1.5 leading-none">
+                                  <Price value={Math.round(prod.price * (1 - prod.discount / 100))} className="text-[14.5px] font-black text-slate-900 leading-none" />
+                                  <Price value={prod.price} className="text-[10.5px] text-slate-400 line-through font-semibold leading-none" />
+                                </div>
+                                <span className="text-[9.5px] font-black text-emerald-600 mt-1 leading-none">
+                                  Save <Price value={prod.price - Math.round(prod.price * (1 - prod.discount / 100))} /> ({prod.discount}% off)
+                                </span>
+                              </>
+                            ) : (
+                              <Price value={prod.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
+                            )}
                           </div>
                           <button
                             onClick={(e) => {
@@ -1018,8 +1147,10 @@ export const Marketplace: React.FC = () => {
     <MainLayout>
       <div className="w-full flex flex-col items-stretch space-y-8 select-none">
         
+
+
         {/* Mobile/Tablet Filter & Search row */}
-        <div className="flex lg:hidden items-center justify-between gap-3 mb-2">
+        <div className="flex lg:hidden items-center justify-between gap-3 mb-2 sticky top-16 z-30 bg-slate-50/95 backdrop-blur-sm py-2">
           <div className="flex-grow">
             <Search value={searchQuery} onChange={setSearchQuery} placeholder="Search hardware..." />
           </div>
@@ -1036,9 +1167,9 @@ export const Marketplace: React.FC = () => {
         </div>
 
         {/* Content catalog Layout */}
-        <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8 items-start -mt-8">
           {/* Left Column Filters Sticky Sidebar */}
-          <aside className="hidden lg:block lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto col-span-1 select-none">
+          <aside className="hidden lg:block lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto col-span-1 select-none">
             <Card variant="simple" className="p-6 border-slate-200 text-left bg-white rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
               <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-5">
                 <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider">Filters</h3>
@@ -1057,6 +1188,62 @@ export const Marketplace: React.FC = () => {
 
           {/* Right Column: Catalog Products Grid */}
           <section className="col-span-1 lg:col-span-3 flex flex-col space-y-6">
+            {/* Horizontal Category Scroll Bar (Flipkart Style) */}
+            <div className="w-full bg-white border border-slate-200/60 rounded-[20px] py-2 px-3 select-none shadow-[0_4px_20px_rgba(15,23,42,0.015)]">
+              <div className="flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-2 sm:gap-4 md:gap-0 px-1 justify-start md:justify-center w-full">
+                {categoriesLoading ? (
+                  Array.from({ length: 6 }).map((_, idx) => (
+                    <div key={idx} className="flex flex-col items-center space-y-1 flex-shrink-0 md:flex-shrink-0 w-[80px] sm:w-[95px] md:w-[16.6%] md:max-w-[16.6%] animate-pulse">
+                      <div className="w-7 h-7 rounded-lg bg-slate-100 border border-slate-200/30" />
+                      <div className="h-2 w-8 bg-slate-200 rounded" />
+                    </div>
+                  ))
+                ) : (
+                  <>
+                    {/* Categories from backend */}
+                    {categoriesList.map((cat) => {
+                      const isSelected = selectedCategory === cat.name;
+                      const imgUrl = getImageUrl(cat);
+                      return (
+                        <button
+                          key={cat.categoryId || cat.id}
+                          onClick={() => {
+                            setSelectedCategory(cat.name);
+                            setShowShopGrid(true);
+                          }}
+                          className="flex flex-col items-center space-y-1 group cursor-pointer focus:outline-none flex-shrink-0 md:flex-shrink-0 w-[80px] sm:w-[95px] md:w-[16.6%] md:max-w-[16.6%] border-none bg-transparent"
+                        >
+                          <div className={cn(
+                            "w-7 h-7 rounded-lg flex items-center justify-center transition-all duration-300 border overflow-hidden",
+                            isSelected
+                              ? "bg-blue-50/60 border-blue-200/50 shadow-[0_4px_12px_rgba(37,99,235,0.05)] scale-105"
+                              : "bg-slate-50/40 border-slate-100/50 group-hover:border-slate-350 group-hover:bg-slate-50"
+                          )}>
+                            {imgUrl ? (
+                              <img src={imgUrl} alt={cat.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <CategoryIcon name={cat.name} isActive={isSelected} />
+                            )}
+                          </div>
+                          <div className="flex flex-col items-center">
+                            <span className={cn(
+                              "text-[9.5px] tracking-tight transition-colors font-bold",
+                              isSelected ? "text-slate-900" : "text-slate-500 group-hover:text-slate-800"
+                            )}>
+                              {formatCategoryName(cat.name)}
+                            </span>
+                            <div className={cn(
+                              "h-[2px] w-5 rounded-full mt-0.5 transition-all duration-300",
+                              isSelected ? "bg-blue-600" : "bg-transparent"
+                            )} />
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            </div>
             <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
               <div className="text-left flex items-center space-x-2">
                 <span className="text-sm font-bold text-slate-900 tracking-tight">Technology Catalog</span>
@@ -1143,7 +1330,19 @@ export const Marketplace: React.FC = () => {
                         <div className="border-t border-slate-100/80 my-3" />
                         <div className="flex items-center justify-between flex-shrink-0">
                           <div className="flex flex-col text-left">
-                            <Price value={prod.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
+                            {prod.discount && prod.discount > 0 ? (
+                              <>
+                                <div className="flex items-center space-x-1.5 leading-none">
+                                  <Price value={Math.round(prod.price * (1 - prod.discount / 100))} className="text-[14.5px] font-black text-slate-900 leading-none" />
+                                  <Price value={prod.price} className="text-[10.5px] text-slate-400 line-through font-semibold leading-none" />
+                                </div>
+                                <span className="text-[9.5px] font-black text-emerald-600 mt-1 leading-none">
+                                  Save <Price value={prod.price - Math.round(prod.price * (1 - prod.discount / 100))} /> ({prod.discount}% off)
+                                </span>
+                              </>
+                            ) : (
+                              <Price value={prod.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
+                            )}
                           </div>
                           <button
                             onClick={(e) => {
