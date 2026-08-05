@@ -641,6 +641,35 @@ export const Marketplace: React.FC = () => {
     }
   };
 
+  const handleBuyNow = async (product: any) => {
+    const pId = product.productId || product.id;
+    const cartItem = cartItems.find((item: any) => item.id === pId);
+    const currentCartQty = cartItem ? cartItem.quantity : 0;
+    const stock = product.stock !== undefined ? product.stock : 10;
+
+    if (stock === 0) {
+      toast.error('This product is out of stock.');
+      return;
+    }
+
+    if (currentCartQty + 1 > stock) {
+      navigate('/cart');
+      return;
+    }
+
+    try {
+      await dispatch(
+        addToCartBackend({
+          productId: pId,
+          quantity: 1,
+        })
+      ).unwrap();
+      navigate('/cart');
+    } catch (err: any) {
+      navigate('/cart');
+    }
+  };
+
   const getProductImage = (product: any) => {
     return getImageUrl(product);
   };
@@ -1029,7 +1058,7 @@ export const Marketplace: React.FC = () => {
             </div>
 
             {/* Desktop View: Featured Products cards (5-in-a-row) */}
-            <div className="hidden sm:grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-5">
+            <div className="hidden sm:grid gap-4 lg:gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
               {trendingLoading ? (
                 Array.from({ length: 5 }).map((_, idx) => (
                   <SkeletonProductCard key={`skeleton-trending-${idx}`} />
@@ -1051,46 +1080,60 @@ export const Marketplace: React.FC = () => {
                         />
                       </div>
                       <div className="flex flex-col flex-grow justify-between text-left">
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">{prod.brand}</span>
                           <h3 className="text-[13.5px] font-black text-slate-905 tracking-tight leading-snug mt-1 group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[36px]">
                             {prod.name}
                           </h3>
-                          <div className="flex items-center space-x-1 mt-1.5 flex-wrap gap-y-1">
-                            <span className="px-2 py-0.5 rounded bg-slate-50 text-[9px] font-bold text-slate-455 border border-slate-100/80">
-                              {prod.specifications?.ram || prod.specifications?.RAM || 'Standard'}
-                            </span>
-                            <span className="px-2 py-0.5 rounded bg-slate-50 text-[9px] font-bold text-slate-455 border border-slate-100/80">
-                              {prod.specifications?.storage || prod.specifications?.Storage || 'Standard'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="border-t border-slate-100/80 my-3" />
-                        <div className="flex items-center justify-between flex-shrink-0">
-                          <div className="flex flex-col text-left">
-                            {prod.discount && prod.discount > 0 ? (
+                          
+                          {/* Price Section below the name */}
+                          <div className="flex items-center flex-wrap gap-1.5">
+                            <Price value={prod.discount && prod.discount > 0 ? Math.round(prod.price * (1 - prod.discount / 100)) : prod.price} className="text-[15px] font-black text-slate-900 leading-none" />
+                            {prod.discount && prod.discount > 0 && (
                               <>
-                                <div className="flex items-center space-x-1.5 leading-none">
-                                  <Price value={Math.round(prod.price * (1 - prod.discount / 100))} className="text-[14.5px] font-black text-slate-900 leading-none" />
-                                  <Price value={prod.price} className="text-[10.5px] text-slate-400 line-through font-semibold leading-none" />
-                                </div>
-                                <span className="text-[9.5px] font-black text-emerald-600 mt-1 leading-none">
-                                  Save <Price value={prod.price - Math.round(prod.price * (1 - prod.discount / 100))} /> ({prod.discount}% off)
+                                <Price value={prod.price} className="text-[11px] text-slate-400 line-through font-semibold leading-none ml-1" />
+                                <span className="px-1.5 py-0.5 rounded-[5px] bg-emerald-50 text-[9px] font-extrabold text-emerald-600 border border-emerald-100/50 uppercase tracking-wider leading-none">
+                                  {prod.discount}% OFF
                                 </span>
                               </>
-                            ) : (
-                              <Price value={prod.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
                             )}
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddToCart(prod);
-                            }}
-                            className="w-9 h-9 rounded-full bg-blue-50/70 hover:bg-blue-600 text-slate-800 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
-                          >
-                            <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
-                          </button>
+
+                          {/* Category Tag under the price */}
+                          {prod.category && (
+                            <div className="flex pt-1">
+                              <span className="px-2 py-0.5 rounded bg-blue-50/60 text-[9px] font-bold text-blue-700 border border-blue-100/40 uppercase tracking-wider">
+                                {prod.category}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="border-t border-slate-100/80 my-3" />
+                          <div className="flex items-center space-x-2 w-full flex-shrink-0">
+                            {/* Cart Icon Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(prod);
+                              }}
+                              className="w-10 h-8 rounded-lg bg-slate-50 border border-slate-200/50 hover:bg-slate-100 hover:border-slate-300 text-slate-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
+                              title="Add to Cart"
+                            >
+                              <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
+                            </button>
+                            {/* Buy Now Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBuyNow(prod);
+                              }}
+                              className="h-8 flex-grow rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-wider flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm border-none"
+                            >
+                              Buy Now
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1285,7 +1328,7 @@ export const Marketplace: React.FC = () => {
             </div>
 
             {/* Catalog Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
               {isLoading ? (
                 Array.from({ length: itemsPerPage }).map((_, idx) => (
                   <SkeletonProductCard key={`skeleton-catalog-${idx}`} />
@@ -1307,52 +1350,66 @@ export const Marketplace: React.FC = () => {
                         />
                       </div>
                       <div className="flex flex-col flex-grow justify-between text-left mt-3">
-                        <div className="space-y-1 mb-2">
-                          <span className="text-[10px] font-black text-blue-650 tracking-wider uppercase">{prod.brand}</span>
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-black text-blue-655 tracking-wider uppercase">{prod.brand}</span>
                           <h4 className="text-[13.5px] font-extrabold text-slate-800 tracking-tight leading-tight mt-1 truncate w-full">
                             {prod.name}
                           </h4>
                           <div className="flex items-center space-x-1 pt-1">
                             <Rating value={reviewsStats[prod.productId || prod.id] ? Math.round(reviewsStats[prod.productId || prod.id].avgRating) : 5} readOnly size="sm" />
-                            <span className="text-[10.5px] text-slate-800 font-bold ml-1.5">
+                            <span className="text-[10.5px] text-slate-800 font-bold ml-1.5 flex-shrink-0">
                               ({reviewsStats[prod.productId || prod.id] ? reviewsStats[prod.productId || prod.id].count : 0})
                             </span>
                           </div>
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            <span className="text-[9.5px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-[5px]">
-                              {prod.specifications?.ram || prod.specifications?.RAM || 'Standard'}
-                            </span>
-                            <span className="text-[9.5px] font-bold text-slate-500 bg-slate-50 px-2 py-0.5 rounded-[5px]">
-                              {prod.specifications?.storage || prod.specifications?.Storage || 'Standard'}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="border-t border-slate-100/80 my-3" />
-                        <div className="flex items-center justify-between flex-shrink-0">
-                          <div className="flex flex-col text-left">
-                            {prod.discount && prod.discount > 0 ? (
+                          
+                          {/* Price Section below the name */}
+                          <div className="flex items-center flex-wrap gap-1.5">
+                            <Price value={prod.discount && prod.discount > 0 ? Math.round(prod.price * (1 - prod.discount / 100)) : prod.price} className="text-[15px] font-black text-slate-900 leading-none" />
+                            {prod.discount && prod.discount > 0 && (
                               <>
-                                <div className="flex items-center space-x-1.5 leading-none">
-                                  <Price value={Math.round(prod.price * (1 - prod.discount / 100))} className="text-[14.5px] font-black text-slate-900 leading-none" />
-                                  <Price value={prod.price} className="text-[10.5px] text-slate-400 line-through font-semibold leading-none" />
-                                </div>
-                                <span className="text-[9.5px] font-black text-emerald-600 mt-1 leading-none">
-                                  Save <Price value={prod.price - Math.round(prod.price * (1 - prod.discount / 100))} /> ({prod.discount}% off)
+                                <Price value={prod.price} className="text-[11px] text-slate-400 line-through font-semibold leading-none ml-1" />
+                                <span className="px-1.5 py-0.5 rounded-[5px] bg-emerald-50 text-[9px] font-extrabold text-emerald-600 border border-emerald-100/50 uppercase tracking-wider leading-none">
+                                  {prod.discount}% OFF
                                 </span>
                               </>
-                            ) : (
-                              <Price value={prod.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
                             )}
                           </div>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAddToCart(prod);
-                            }}
-                            className="w-9 h-9 rounded-full bg-blue-50/70 hover:bg-blue-600 text-slate-800 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
-                          >
-                            <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
-                          </button>
+
+                          {/* Category Tag under the price */}
+                          {prod.category && (
+                            <div className="flex pt-1">
+                              <span className="text-[9px] font-bold text-blue-700 bg-blue-50/60 px-2 py-0.5 rounded-[5px] border border-blue-100/40 uppercase tracking-wider">
+                                {prod.category}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="border-t border-slate-100/80 my-3" />
+                          <div className="flex items-center space-x-2 w-full flex-shrink-0">
+                            {/* Cart Icon Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAddToCart(prod);
+                              }}
+                              className="w-10 h-8 rounded-lg bg-slate-50 border border-slate-200/50 hover:bg-slate-100 hover:border-slate-300 text-slate-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
+                              title="Add to Cart"
+                            >
+                              <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
+                            </button>
+                            {/* Buy Now Button */}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBuyNow(prod);
+                              }}
+                              className="h-8 flex-grow rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-wider flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm border-none"
+                            >
+                              Buy Now
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>

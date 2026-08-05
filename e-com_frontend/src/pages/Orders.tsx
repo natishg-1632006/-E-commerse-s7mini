@@ -31,6 +31,7 @@ import sleeveImg from '../assets/products/laptop_sleeve_leather.jpg';
 import matImg from '../assets/products/premium_desk_mat.jpg';
 import guideImg from '../assets/products/guide.jpg';
 import { getImageUrl } from '../utils/imageHelper';
+import { Rating } from '../components/ui/Rating';
 
 
 
@@ -237,13 +238,32 @@ export const Orders: React.FC = () => {
 
 
   // Add accessory to Redux cart
-  const handleAddAccessoryToCart = (acc: any) => {
-    dispatch(
-      addToCartBackend({
-        productId: acc.id,
-        quantity: 1,
-      })
-    );
+  const handleAddToCart = async (product: any) => {
+    try {
+      await dispatch(
+        addToCartBackend({
+          productId: product.id || product.productId,
+          quantity: 1,
+        })
+      ).unwrap();
+      toast.success(`${product.name} added to cart!`);
+    } catch (err: any) {
+      toast.error(err || 'Failed to add item to cart.');
+    }
+  };
+
+  const handleBuyNow = async (product: any) => {
+    try {
+      await dispatch(
+        addToCartBackend({
+          productId: product.id || product.productId,
+          quantity: 1,
+        })
+      ).unwrap();
+      navigate('/cart');
+    } catch (err: any) {
+      navigate('/cart');
+    }
   };
 
   // Format all backend orders to canonical list structures
@@ -398,10 +418,10 @@ export const Orders: React.FC = () => {
   // Accessories list (Frequently Bought Together) dynamically resolved from catalog database
   const accessories = useMemo(() => {
     const defaultAccs = [
-      { id: 'acc-sleeve', name: 'ProLeather Shield 14"', price: 8900, listPrice: 11900, image: sleeveImg, specs: 'Premium Leather' },
-      { id: 'acc-dock', name: 'CoreLink Multi-Dock', price: 14900, listPrice: 17900, image: ssdImg, specs: '10-in-1 Hub' },
-      { id: 'acc-mat', name: 'TypeFlow Mechanical Air', price: 19900, listPrice: 24900, image: matImg, specs: 'Wireless Mechanical' },
-      { id: 'acc-kit', name: 'NanoClear Display Kit', price: 2900, listPrice: 3900, image: guideImg, specs: 'Microfiber & Spray' }
+      { id: 'acc-sleeve', name: 'ProLeather Shield 14"', price: 8900, listPrice: 11900, image: sleeveImg, specs: 'Premium Leather', category: 'Accessories', brand: 'Premium', discount: 25, stock: 5 },
+      { id: 'acc-dock', name: 'CoreLink Multi-Dock', price: 14900, listPrice: 17900, image: ssdImg, specs: '10-in-1 Hub', category: 'Accessories', brand: 'Premium', discount: 16, stock: 5 },
+      { id: 'acc-mat', name: 'TypeFlow Mechanical Air', price: 19900, listPrice: 24900, image: matImg, specs: 'Wireless Mechanical', category: 'Accessories', brand: 'Premium', discount: 20, stock: 5 },
+      { id: 'acc-kit', name: 'NanoClear Display Kit', price: 2900, listPrice: 3900, image: guideImg, specs: 'Microfiber & Spray', category: 'Accessories', brand: 'Premium', discount: 25, stock: 5 }
     ];
 
     if (catalogProducts.length === 0) return defaultAccs;
@@ -420,6 +440,11 @@ export const Orders: React.FC = () => {
         listPrice,
         image,
         specs: ram && storage ? `${ram}, ${storage}` : (ram || storage || def.specs),
+        category: prod.category || 'Accessories',
+        discount: prod.discount || 0,
+        stock: prod.stock !== undefined ? prod.stock : 10,
+        originalProduct: prod,
+        brand: prod.brand || 'Accessories'
       };
     });
   }, [catalogProducts]);
@@ -1033,11 +1058,12 @@ export const Orders: React.FC = () => {
               </div>
 
               {/* Slider grid layout */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-5">
+              <div className="grid gap-4 lg:gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
                 {accessories.map((acc) => (
                   <div
                     key={acc.id}
-                    className="group relative bg-white border border-slate-200/60 rounded-[30px] p-4 flex flex-col justify-between hover:shadow-[0_24px_50px_rgba(15,23,42,0.04)] hover:-translate-y-1 transition-all duration-350 select-none text-left"
+                    onClick={() => navigate(`/product/${acc.id}`)}
+                    className="group relative bg-white border border-slate-200/60 rounded-[30px] p-4 flex flex-col justify-between hover:shadow-[0_24px_50px_rgba(15,23,42,0.04)] hover:-translate-y-1 transition-all duration-350 select-none text-left cursor-pointer"
                   >
                     {/* Thumbnail box */}
                     <div className="relative aspect-[4/3] w-full rounded-[22px] overflow-hidden bg-slate-50/70 p-2 sm:p-2.5 flex items-center justify-center mb-4">
@@ -1050,38 +1076,66 @@ export const Orders: React.FC = () => {
 
                     {/* Meta info */}
                     <div className="flex flex-col flex-grow justify-between text-left">
-                      <div className="space-y-1">
-                        <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">Accessory</span>
+                      <div className="space-y-1.5">
+                        <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">{acc.brand}</span>
                         <h3 className="text-[13.5px] font-black text-slate-900 tracking-tight leading-snug mt-1 group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[36px]">
                           {acc.name}
                         </h3>
-                        {/* Specs tag labels */}
-                        <div className="flex items-center space-x-1.5 mt-1.5 flex-wrap gap-y-1">
-                          <span className="px-2 py-0.5 rounded bg-slate-50 text-[9px] font-bold text-slate-455 border border-slate-100/80">
-                            {acc.specs}
-                          </span>
+                        
+                        {/* Rating row (custom Accessory placeholder since reviews is omitted on Orders page) */}
+                        <div className="flex items-center space-x-1 pt-1">
+                          <Rating value={5} readOnly size="sm" />
+                          <span className="text-[10.5px] text-slate-800 font-bold ml-1.5">(0)</span>
                         </div>
-                      </div>
 
-                      <div className="border-t border-slate-100/80 my-3" />
-
-                      <div className="flex items-center justify-between flex-shrink-0">
-                        <div className="flex flex-col text-left">
-                          <Price value={acc.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
-                          {acc.listPrice && (
-                            <Price value={acc.listPrice} className="text-[10.5px] text-slate-400 line-through font-bold mt-1" />
+                        {/* Price Section below the name */}
+                        <div className="flex items-center flex-wrap gap-1.5">
+                          <Price value={acc.price} className="text-[15px] font-black text-slate-900 leading-none" />
+                          {acc.listPrice && acc.listPrice > acc.price && (
+                            <>
+                              <Price value={acc.listPrice} className="text-[11px] text-slate-400 line-through font-semibold leading-none ml-1" />
+                              <span className="px-1.5 py-0.5 rounded-[5px] bg-emerald-50 text-[9px] font-extrabold text-emerald-600 border border-emerald-100/50 uppercase tracking-wider leading-none">
+                                {acc.discount}% OFF
+                              </span>
+                            </>
                           )}
                         </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAddAccessoryToCart(acc);
-                          }}
-                          className="w-9 h-9 rounded-full bg-blue-50/70 hover:bg-blue-600 text-slate-800 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
-                          aria-label={`Add ${acc.name} to cart`}
-                        >
-                          <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
-                        </button>
+
+                        {/* Category Tag under the price */}
+                        {acc.category && (
+                          <div className="flex pt-1">
+                            <span className="px-2 py-0.5 rounded bg-blue-50/60 text-[9px] font-bold text-blue-700 border border-blue-100/40 uppercase tracking-wider">
+                              {acc.category}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="border-t border-slate-100/80 my-3" />
+                        <div className="flex items-center space-x-2 w-full flex-shrink-0">
+                          {/* Cart Icon Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAddToCart(acc);
+                            }}
+                            className="w-10 h-8 rounded-lg bg-slate-50 border border-slate-200/50 hover:bg-slate-100 hover:border-slate-300 text-slate-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
+                            title="Add to Cart"
+                          >
+                            <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
+                          </button>
+                          {/* Buy Now Button */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBuyNow(acc);
+                            }}
+                            className="h-8 flex-grow rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-wider flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm border-none"
+                          >
+                            Buy Now
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>

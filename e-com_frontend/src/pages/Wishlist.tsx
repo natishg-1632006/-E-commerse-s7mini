@@ -88,6 +88,20 @@ export const Wishlist: React.FC = () => {
     }
   };
 
+  const handleBuyNow = async (product: any) => {
+    try {
+      await dispatch(
+        addToCartBackend({
+          productId: product.productId || product.id,
+          quantity: 1,
+        })
+      ).unwrap();
+      navigate('/cart');
+    } catch (err: any) {
+      navigate('/cart');
+    }
+  };
+
   // Filter products in wishlist
   const wishlistedItems = products.filter((p) => wishlistProductIds.includes(p.productId || p.id));
 
@@ -127,7 +141,7 @@ export const Wishlist: React.FC = () => {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
+          <div className="grid gap-4 lg:gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
             {wishlistedItems.map((product) => {
               const imgUrl = getImageUrl(product);
               return (
@@ -155,38 +169,62 @@ export const Wishlist: React.FC = () => {
                   </div>
 
                   <div className="flex flex-col flex-grow justify-between text-left">
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-widest leading-none block">
                         {product.brand || 'Premium'}
                       </span>
                       <h3 className="text-[13.5px] font-black text-slate-905 tracking-tight leading-snug mt-1 group-hover:text-blue-600 transition-colors line-clamp-2 min-h-[36px]">
                         {product.name}
                       </h3>
-                      <div className="flex items-center space-x-1 mt-1.5 flex-wrap gap-y-1">
-                        <span className="px-2 py-0.5 rounded bg-slate-50 text-[9px] font-bold text-slate-455 border border-slate-100/80">
-                          {product.specifications?.ram || product.specifications?.RAM || 'Standard'}
-                        </span>
-                        <span className="px-2 py-0.5 rounded bg-slate-50 text-[9px] font-bold text-slate-455 border border-slate-100/80">
-                          {product.specifications?.storage || product.specifications?.Storage || 'Standard'}
-                        </span>
+                      
+                      {/* Price Section below the name */}
+                      <div className="flex items-center flex-wrap gap-1.5">
+                        <Price value={product.discount && product.discount > 0 ? Math.round(product.price * (1 - product.discount / 100)) : product.price} className="text-[15px] font-black text-slate-900 leading-none" />
+                        {product.discount && product.discount > 0 && (
+                          <>
+                            <Price value={product.price} className="text-[11px] text-slate-400 line-through font-semibold leading-none ml-1" />
+                            <span className="px-1.5 py-0.5 rounded-[5px] bg-emerald-50 text-[9px] font-extrabold text-emerald-600 border border-emerald-100/50 uppercase tracking-wider leading-none">
+                              {product.discount}% OFF
+                            </span>
+                          </>
+                        )}
                       </div>
+
+                      {/* Category Tag under the price */}
+                      {product.category && (
+                        <div className="flex pt-1">
+                          <span className="px-2 py-0.5 rounded bg-blue-50/60 text-[9px] font-bold text-blue-700 border border-blue-100/40 uppercase tracking-wider">
+                            {product.category}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="border-t border-slate-100/80 my-3" />
-
-                    <div className="flex items-center justify-between flex-shrink-0">
-                      <div className="flex flex-col text-left">
-                        <Price value={product.price} className="text-[14.5px] font-black text-slate-900 leading-none" />
+                    <div>
+                      <div className="border-t border-slate-100/80 my-3" />
+                      <div className="flex items-center space-x-2 w-full flex-shrink-0">
+                        {/* Cart Icon Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAddToCart(product);
+                          }}
+                          className="w-10 h-8 rounded-lg bg-slate-50 border border-slate-200/50 hover:bg-slate-100 hover:border-slate-300 text-slate-700 flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm"
+                          title="Add to Cart"
+                        >
+                          <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
+                        </button>
+                        {/* Buy Now Button */}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBuyNow(product);
+                          }}
+                          className="h-8 flex-grow rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-black uppercase tracking-wider flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm border-none"
+                        >
+                          Buy Now
+                        </button>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAddToCart(product);
-                        }}
-                        className="w-9 h-9 rounded-full bg-blue-50/70 hover:bg-blue-600 text-slate-800 hover:text-white flex items-center justify-center cursor-pointer active:scale-95 transition-all shadow-sm border-none"
-                      >
-                        <ShoppingCart className="w-4 h-4 stroke-[2.2px]" />
-                      </button>
                     </div>
                   </div>
                 </div>
