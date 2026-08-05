@@ -2,9 +2,13 @@ const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient } = require('@aws-sdk/lib-dynamodb');
 const AWSXRay = require('aws-xray-sdk');
 
-const client = AWSXRay.captureAWSv3Client(new DynamoDBClient({
+let client = new DynamoDBClient({
   region: process.env.AWS_REGION,
-}));
+});
+
+if (process.env.NODE_ENV !== 'test') {
+  client = AWSXRay.captureAWSv3Client(client);
+}
 
 const docClient = DynamoDBDocumentClient.from(client);
 
