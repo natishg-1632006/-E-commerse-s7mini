@@ -29,7 +29,8 @@
     "http-status-codes": "^2.3.0",
     "morgan": "^1.10.1",
     "serverless-http": "^3.2.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "aws-xray-sdk": "^3.9.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10",

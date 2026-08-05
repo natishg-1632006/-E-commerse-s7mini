@@ -4,7 +4,11 @@ const { v4: uuidv4 } = require('uuid');
 const REGION = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'ap-southeast-1';
 const TOPIC_ARN = process.env.PAYMENT_EVENTS_TOPIC_ARN;
 
-const snsClient = new SNSClient({ region: REGION });
+const AWSXRay = require('aws-xray-sdk');
+let snsClient = new SNSClient({ region: REGION });
+if (process.env.NODE_ENV !== 'test') {
+  snsClient = AWSXRay.captureAWSv3Client(snsClient);
+}
 
 const publishPaymentEvent = async (eventType, payment = {}, order = {}) => {
   const eventId = uuidv4();

@@ -1,8 +1,12 @@
 const { SNSClient, PublishCommand } = require('@aws-sdk/client-sns');
 
-const sns = new SNSClient({
+const AWSXRay = require('aws-xray-sdk');
+let sns = new SNSClient({
   region: process.env.AWS_REGION,
 });
+if (process.env.NODE_ENV !== 'test') {
+  sns = AWSXRay.captureAWSv3Client(sns);
+}
 
 const publishProductCreated = async (product) => {
   const message = {

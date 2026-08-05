@@ -1,3 +1,4 @@
+const AWSXRay = require('aws-xray-sdk');
 const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -9,6 +10,9 @@ const notFound = require('./middleware/notFoundMiddleware');
 const errorHandler = require('./middleware/errorMiddleware');
 
 const app = express();
+if (process.env.NODE_ENV !== 'test') {
+  app.use(AWSXRay.express.openSegment('inventory-service'));
+}
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: process.env.SERVICE_NAME || 'inventory-service', timestamp: new Date().toISOString() });
@@ -32,6 +36,9 @@ app.get('/api', (req, res) => {
 
 app.use('/api/v1/inventory', inventoryRoutes);
 
+if (process.env.NODE_ENV !== 'test') {
+  app.use(AWSXRay.express.closeSegment());
+}
 app.use(notFound);
 app.use(errorHandler);
 

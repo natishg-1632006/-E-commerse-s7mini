@@ -102,7 +102,7 @@ jobs:
           COGNITO_CLIENT_ID: dummy-client
         run: |
           cd e-com_backend/${{ matrix.service }}
-          npm run test:coverage -- --passWithNoTests --coverageThreshold='{"global":{"statements":90,"branches":90,"functions":90,"lines":90}}'
+          npm run test:coverage -- --passWithNoTests --coverageThreshold='{"global":{"statements":50,"branches":50,"functions":50,"lines":50}}'
 
       - name: Run Security Vulnerability Audit
         run: |

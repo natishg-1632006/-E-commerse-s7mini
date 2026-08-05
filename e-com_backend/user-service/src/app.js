@@ -1,3 +1,4 @@
+const AWSXRay = require('aws-xray-sdk');
 const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -10,6 +11,9 @@ const notFound = require('./middleware/notFoundMiddleware');
 const errorHandler = require('./middleware/errorMiddleware');
 
 const app = express();
+if (process.env.NODE_ENV !== 'test') {
+  app.use(AWSXRay.express.openSegment('user-service'));
+}
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(AWSXRay.express.openSegment('user-service'));
@@ -44,6 +48,9 @@ if (process.env.NODE_ENV !== 'test') {
   app.use(AWSXRay.express.closeSegment());
 }
 
+if (process.env.NODE_ENV !== 'test') {
+  app.use(AWSXRay.express.closeSegment());
+}
 app.use(notFound);
 app.use(errorHandler);
 

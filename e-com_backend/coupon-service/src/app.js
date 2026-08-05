@@ -1,3 +1,4 @@
+const AWSXRay = require('aws-xray-sdk');
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -12,6 +13,9 @@ const notFoundMiddleware = require("./middleware/notFoundMiddleware");
 const errorMiddleware = require("./middleware/errorMiddleware");
 
 const app = express();
+if (process.env.NODE_ENV !== 'test') {
+  app.use(AWSXRay.express.openSegment('coupon-service'));
+}
 
 // Security
 app.use(helmet());

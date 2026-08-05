@@ -1,3 +1,4 @@
+const AWSXRay = require('aws-xray-sdk');
 const express = require('express');
 const helmet = require('helmet');
 const compression = require('compression');
@@ -9,6 +10,9 @@ const reviewRoutes = require('./routes/reviewRoutes');
 const brandRoutes = require('./routes/brandRoutes');
 
 const app = express();
+if (process.env.NODE_ENV !== 'test') {
+  app.use(AWSXRay.express.openSegment('wishlist-review-service'));
+}
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'UP', service: process.env.SERVICE_NAME || 'wishlist-review-service', timestamp: new Date().toISOString() });
