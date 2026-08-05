@@ -57,3 +57,27 @@ functions:
           arn: ${env:INVENTORY_QUEUE_ARN}
           batchSize: 10
           functionResponseType: ReportBatchItemFailures
+resources:
+  Resources:
+    InventoryTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: natish_inventory_v2
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: productId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: productId
+            KeyType: HASH
+    InventoryQueueDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: natish-inventory-payment-events-dlq
+    InventoryQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: natish-inventory-payment-events
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt InventoryQueueDLQ.Arn
+          maxReceiveCount: 3

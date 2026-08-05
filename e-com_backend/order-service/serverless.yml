@@ -61,3 +61,31 @@ functions:
           arn: ${env:ORDER_QUEUE_ARN}
           batchSize: 10
           functionResponseType: ReportBatchItemFailures
+resources:
+  Resources:
+    OrdersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: natish_orders
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: orderid
+            AttributeType: S
+        KeySchema:
+          - AttributeName: orderid
+            KeyType: HASH
+    OrderEventsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: natish-order-events
+    OrderPaymentQueueDLQ:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: natish-order-payment-events-dlq
+    OrderPaymentQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: natish-order-payment-events
+        RedrivePolicy:
+          deadLetterTargetArn: !GetAtt OrderPaymentQueueDLQ.Arn
+          maxReceiveCount: 3

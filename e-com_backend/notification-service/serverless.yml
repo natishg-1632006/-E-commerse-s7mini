@@ -44,3 +44,9 @@ functions:
           arn: ${env:NOTIFICATION_QUEUE_ARN}
           batchSize: 10
           functionResponseType: ReportBatchItemFailures
+resources:
+  Resources:
+    NotificationQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: natish-notification-events

@@ -33,3 +33,24 @@ functions:
       - httpApi:
           path: /
           method: ANY
+resources:
+  Resources:
+    CategoriesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: natish_categories
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: categoryId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: categoryId
+            KeyType: HASH
+    CategoryEventsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: natish-category-events
+    ProductCategoryQueue:
+      Type: AWS::SQS::Queue
+      Properties:
+        QueueName: natish-product-category-events

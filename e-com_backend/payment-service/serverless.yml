@@ -62,3 +62,20 @@ functions:
       - httpApi:
           path: /
           method: ANY
+resources:
+  Resources:
+    PaymentTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: natish_payment
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: paymentid
+            AttributeType: S
+        KeySchema:
+          - AttributeName: paymentid
+            KeyType: HASH
+    PaymentEventsTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        TopicName: natish-payment-events
