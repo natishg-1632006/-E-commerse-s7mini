@@ -258,14 +258,6 @@ export const Cart: React.FC = () => {
     });
   }, [catalogProducts, items]);
 
-  const handleAddAccessory = (acc: typeof accessories[0]) => {
-    dispatch(
-      addToCartBackend({
-        productId: acc.id,
-        quantity: 1,
-      })
-    );
-  };
 
   const handleAddToCart = async (product: any) => {
     try {
