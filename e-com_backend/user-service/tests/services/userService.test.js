@@ -40,12 +40,29 @@ describe('userService', () => {
   });
 
   test('updateProfile success, not found, status config', async () => {
+    // 1. All fields defined
     global.docClientSendMock
       .mockResolvedValueOnce({ Item: { userId: 'user-123', fullName: 'Old Name' } })
       .mockResolvedValueOnce({ Attributes: { userId: 'user-123', fullName: 'New Name' } });
-    const res1 = await service.updateProfile('user-123', { fullName: 'New Name' });
+    
+    const res1 = await service.updateProfile('user-123', {
+      fullName: 'New Name',
+      phone: '1234567890',
+      profileImage: 'image.png',
+      address: '123 Main St',
+      status: 'Active'
+    });
     expect(res1.fullName).toBe('New Name');
 
+    // 2. No fields defined (fall back to existing values)
+    global.docClientSendMock
+      .mockResolvedValueOnce({ Item: { userId: 'user-123', fullName: 'Old Name' } })
+      .mockResolvedValueOnce({ Attributes: { userId: 'user-123', fullName: 'Old Name' } });
+    
+    const res2 = await service.updateProfile('user-123', {});
+    expect(res2.fullName).toBe('Old Name');
+
+    // 3. User not found
     global.docClientSendMock.mockResolvedValueOnce({ Item: null });
     await expect(service.updateProfile('user-123', {})).rejects.toThrow('User profile not found');
   });
