@@ -4,17 +4,12 @@ const helmet = require('helmet');
 const compression = require('compression');
 const morgan = require('morgan');
 const cors = require('cors');
-const AWSXRay = require('aws-xray-sdk');
 
 const userRoutes = require('./routes/userRoutes');
 const notFound = require('./middleware/notFoundMiddleware');
 const errorHandler = require('./middleware/errorMiddleware');
 
 const app = express();
-if (process.env.NODE_ENV !== 'test') {
-  app.use(AWSXRay.express.openSegment('user-service'));
-}
-
 if (process.env.NODE_ENV !== 'test') {
   app.use(AWSXRay.express.openSegment('user-service'));
 }
@@ -43,10 +38,6 @@ app.get('/api', (req, res) => {
 });
 
 app.use('/api/v1/users', userRoutes);
-
-if (process.env.NODE_ENV !== 'test') {
-  app.use(AWSXRay.express.closeSegment());
-}
 
 if (process.env.NODE_ENV !== 'test') {
   app.use(AWSXRay.express.closeSegment());
