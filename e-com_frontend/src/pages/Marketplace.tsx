@@ -87,29 +87,7 @@ export const Marketplace: React.FC = () => {
   const [rawProducts, setRawProducts] = useState<any[]>([]);
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<any[]>([]);
-  const [allReviews, setAllReviews] = useState<any[]>([]);
-
-  // Calculate average rating and review count per product
-  const reviewsStats = useMemo(() => {
-    const stats: Record<string, { sum: number; count: number; avgRating: number }> = {};
-    allReviews.forEach((rev) => {
-      const pId = rev.productId;
-      if (!pId) return;
-      if (!stats[pId]) {
-        stats[pId] = { sum: 0, count: 0, avgRating: 5.0 };
-      }
-      stats[pId].sum += rev.rating || 0;
-      stats[pId].count += 1;
-    });
-
-    Object.keys(stats).forEach((pId) => {
-      const s = stats[pId];
-      if (s.count > 0) {
-        s.avgRating = Number((s.sum / s.count).toFixed(1));
-      }
-    });
-    return stats;
-  }, [allReviews]);
+  const [reviewsStats, setReviewsStats] = useState<Record<string, { sum: number; count: number; avgRating: number }>>({});
 
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -185,18 +163,6 @@ export const Marketplace: React.FC = () => {
     fetchCategories();
   }, []);
 
-  // Load all reviews on component mount
-  useEffect(() => {
-    const fetchReviews = async () => {
-      try {
-        const reviews = await reviewService.getAllReviews();
-        setAllReviews(reviews);
-      } catch (err) {
-        console.error('Error fetching all reviews:', err);
-      }
-    };
-    fetchReviews();
-  }, []);
 
   // Sync URL query params
   useEffect(() => {
@@ -404,6 +370,45 @@ export const Marketplace: React.FC = () => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredProducts.slice(start, start + itemsPerPage);
   }, [filteredProducts, currentPage, itemsPerPage]);
+
+  // Load reviews stats for products currently on page
+  useEffect(() => {
+    if (productsList.length > 0) {
+      const fetchReviewsForProducts = async () => {
+        try {
+          const promises = productsList.map(async (p) => {
+            const pId = p.productId || p.id;
+            try {
+              const res = await reviewService.getProductReviews(pId);
+              const reviews = Array.isArray(res) ? res : (res as any).data || [];
+              return { productId: pId, reviews };
+            } catch {
+              return { productId: pId, reviews: [] };
+            }
+          });
+          const results = await Promise.all(promises);
+
+          const stats: Record<string, { sum: number; count: number; avgRating: number }> = {};
+          results.forEach(({ productId, reviews }) => {
+            let sum = 0;
+            const count = reviews.length;
+            reviews.forEach((r: any) => {
+              sum += r.rating || 0;
+            });
+            stats[productId] = {
+              sum,
+              count,
+              avgRating: count > 0 ? Number((sum / count).toFixed(1)) : 5.0,
+            };
+          });
+          setReviewsStats(stats);
+        } catch (err) {
+          console.error('Error fetching reviews stats:', err);
+        }
+      };
+      fetchReviewsForProducts();
+    }
+  }, [productsList]);
 
   // Sync results metadata
   useEffect(() => {
