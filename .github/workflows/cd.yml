@@ -37,7 +37,14 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Exact Commit SHA
-        run: git checkout ${{ github.event.workflow_run.head_sha }}
+        run: |
+          git checkout ${{ github.event.workflow_run.head_sha }}
+          echo "=== GIT LOG ==="
+          git log -n 5 --oneline
+          echo "=== GIT BRANCHES ==="
+          git branch -a
+          echo "=== GIT SHOW HEAD ==="
+          git show --stat HEAD
 
       - name: Filter Paths
         id: filter
