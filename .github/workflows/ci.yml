@@ -127,7 +127,7 @@ jobs:
           path: e-com_backend/${{ matrix.service }}/snyk-report-${{ matrix.service }}.html
           if-no-files-found: ignore
 
-sonarqube:
+  sonarqube:
   name: SonarQube Analysis
   needs: validate
   runs-on: ubuntu-latest
