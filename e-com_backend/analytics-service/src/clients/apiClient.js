@@ -1,6 +1,7 @@
 const axios = require('axios');
 const http = require('node:http');
 const https = require('node:https');
+const crypto = require('node:crypto');
 
 // Reusable HTTP and HTTPS agents with Keep-Alive enabled
 const httpAgent = new http.Agent({
@@ -56,7 +57,8 @@ const createClient = (baseURL) => {
       if (isTransient && config.__retryCount < maxRetries) {
         config.__retryCount += 1;
         // Exponential backoff: 200ms, 400ms, 800ms + random jitter
-        const backoffDelay = Math.pow(2, config.__retryCount) * 100 + Math.random() * 50;
+        const jitter = crypto.randomInt ? crypto.randomInt(0, 50) : Math.floor(Math.random() * 50);
+        const backoffDelay = Math.pow(2, config.__retryCount) * 100 + jitter;
 
         console.warn(
           `[Analytics Client] Attempt ${config.__retryCount} failed for ${config.url} (${response ? 'Status: ' + response.status : 'Network/Timeout Error'}). Retrying in ${Math.round(backoffDelay)}ms...`
