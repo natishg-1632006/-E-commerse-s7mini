@@ -127,21 +127,21 @@ jobs:
           path: e-com_backend/${{ matrix.service }}/snyk-report-${{ matrix.service }}.html
           if-no-files-found: ignore
 
-  sonarqube:
-  name: SonarQube Analysis
-  needs: validate
-  runs-on: ubuntu-latest
+    sonarqube:
+    name: SonarQube Analysis
+    needs: validate
+    runs-on: ubuntu-latest
 
-  permissions:
-    contents: read
-    pull-requests: read
+    permissions:
+      contents: read
+      pull-requests: read
 
-  steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: SonarQube Scan
-      uses: SonarSource/sonarqube-scan-action@v5
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
