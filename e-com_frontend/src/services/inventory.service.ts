@@ -54,6 +54,17 @@ class InventoryService {
     return response.data;
   }
 
+  async checkStockBatch(productIds: string[]) {
+    const response = await inventoryApi.post('/api/v1/inventory/batch-check', {
+      items: productIds.map(id => ({ productId: id, quantity: 1 }))
+    }, {
+      headers: {
+        'x-service-key': 'my-super-secret-key-123'
+      }
+    });
+    return response.data;
+  }
+
   async updateInventoryThreshold(productId: string, threshold: number) {
     const response = await inventoryApi.put(`/api/v1/inventory/${productId}`, {
       lowStockThreshold: threshold

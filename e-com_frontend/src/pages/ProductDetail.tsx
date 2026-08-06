@@ -184,22 +184,29 @@ export const ProductDetail: React.FC = () => {
           const catRes = await productService.getProducts({ limit: 100 });
           const catData = catRes.data || catRes.products || (Array.isArray(catRes) ? catRes : []);
           
-          const productsWithStock = await Promise.all(
-            catData.map(async (p: any) => {
-              const pId = p.productId || p.id;
-              try {
-                const stockRes = await inventoryService.checkStock(pId);
-                const data = stockRes.data || stockRes;
-                return {
-                  ...p,
-                  stock: data.exists ? data.availableStock : 10
-                };
-              } catch (err) {
-                console.error(`Error checking stock in detail recommendations for ${pId}:`, err);
-                return { ...p, stock: 10 };
+          const productIds = catData.map((p: any) => p.productId || p.id).filter(Boolean);
+          let stockMap: Record<string, number> = {};
+          if (productIds.length > 0) {
+            try {
+              const stockRes = await inventoryService.checkStockBatch(productIds);
+              const stockList = stockRes.data || stockRes || [];
+              if (Array.isArray(stockList)) {
+                stockList.forEach((s: any) => {
+                  stockMap[s.productId] = s.exists ? s.availableStock : 10;
+                });
               }
-            })
-          );
+            } catch (err) {
+              console.error('Error fetching batch stock in detail recommendations:', err);
+            }
+          }
+
+          const productsWithStock = catData.map((p: any) => {
+            const pId = p.productId || p.id;
+            return {
+              ...p,
+              stock: stockMap[pId] !== undefined ? stockMap[pId] : 10
+            };
+          });
           
           const inStockList = productsWithStock.filter((p: any) => {
             const stock = p.stock !== undefined ? p.stock : 10;

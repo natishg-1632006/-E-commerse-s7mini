@@ -51,22 +51,29 @@ export const Navbar: React.FC<NavbarProps> = ({
           const prodRes = await productService.getProducts({ limit: 1000 });
           const rawProdList = prodRes.data || prodRes.products || (Array.isArray(prodRes) ? prodRes : []);
           
-          prodList = await Promise.all(
-            rawProdList.map(async (p: any) => {
-              const pId = p.productId || p.id;
-              try {
-                const stockRes = await inventoryService.checkStock(pId);
-                const data = stockRes.data || stockRes;
-                return {
-                  ...p,
-                  stock: data.exists ? data.availableStock : 10
-                };
-              } catch (err) {
-                console.error(`Error checking stock in navbar categories list for ${pId}:`, err);
-                return { ...p, stock: 10 };
+          const productIds = rawProdList.map((p: any) => p.productId || p.id).filter(Boolean);
+          let stockMap: Record<string, number> = {};
+          if (productIds.length > 0) {
+            try {
+              const stockRes = await inventoryService.checkStockBatch(productIds);
+              const stockList = stockRes.data || stockRes || [];
+              if (Array.isArray(stockList)) {
+                stockList.forEach((s: any) => {
+                  stockMap[s.productId] = s.exists ? s.availableStock : 10;
+                });
               }
-            })
-          );
+            } catch (err) {
+              console.error('Error fetching batch stock in navbar:', err);
+            }
+          }
+
+          prodList = rawProdList.map((p: any) => {
+            const pId = p.productId || p.id;
+            return {
+              ...p,
+              stock: stockMap[pId] !== undefined ? stockMap[pId] : 10
+            };
+          });
         } catch (prodErr) {
           console.error('Error fetching products for navbar category filter:', prodErr);
         }

@@ -287,22 +287,29 @@ export const Marketplace: React.FC = () => {
           const prodRes = await productService.getProducts({ limit: 1000 });
           const rawProdList = prodRes.data || prodRes.products || (Array.isArray(prodRes) ? prodRes : []);
           
-          prodList = await Promise.all(
-            rawProdList.map(async (p: any) => {
-              const pId = p.productId || p.id;
-              try {
-                const stockRes = await inventoryService.checkStock(pId);
-                const data = stockRes.data || stockRes;
-                return {
-                  ...p,
-                  stock: data.exists ? data.availableStock : 10
-                };
-              } catch (err) {
-                console.error(`Error checking stock in categories list for ${pId}:`, err);
-                return { ...p, stock: 10 };
+          const productIds = rawProdList.map((p: any) => p.productId || p.id).filter(Boolean);
+          let stockMap: Record<string, number> = {};
+          if (productIds.length > 0) {
+            try {
+              const stockRes = await inventoryService.checkStockBatch(productIds);
+              const stockList = stockRes.data || stockRes || [];
+              if (Array.isArray(stockList)) {
+                stockList.forEach((s: any) => {
+                  stockMap[s.productId] = s.exists ? s.availableStock : 10;
+                });
               }
-            })
-          );
+            } catch (err) {
+              console.error('Error fetching batch stock in categories:', err);
+            }
+          }
+
+          prodList = rawProdList.map((p: any) => {
+            const pId = p.productId || p.id;
+            return {
+              ...p,
+              stock: stockMap[pId] !== undefined ? stockMap[pId] : 10
+            };
+          });
         } catch (prodErr) {
           console.error('Error fetching products for category filter:', prodErr);
         }
@@ -378,23 +385,30 @@ export const Marketplace: React.FC = () => {
         const res = await productService.getProducts(params);
         const list = res.data || res.products || (Array.isArray(res) ? res : []);
         
-        // Check real stock values in parallel
-        const productsWithStock = await Promise.all(
-          list.map(async (p: any) => {
-            const pId = p.productId || p.id;
-            try {
-              const stockRes = await inventoryService.checkStock(pId);
-              const data = stockRes.data || stockRes;
-              return {
-                ...p,
-                stock: data.exists ? data.availableStock : 10
-              };
-            } catch (err) {
-              console.error(`Error checking stock in fetchProducts for ${pId}:`, err);
-              return { ...p, stock: 10 };
+        // Use batch check stock
+        const productIds = list.map((p: any) => p.productId || p.id).filter(Boolean);
+        let stockMap: Record<string, number> = {};
+        if (productIds.length > 0) {
+          try {
+            const stockRes = await inventoryService.checkStockBatch(productIds);
+            const stockList = stockRes.data || stockRes || [];
+            if (Array.isArray(stockList)) {
+              stockList.forEach((s: any) => {
+                stockMap[s.productId] = s.exists ? s.availableStock : 10;
+              });
             }
-          })
-        );
+          } catch (err) {
+            console.error('Error fetching batch stock in fetchProducts:', err);
+          }
+        }
+
+        const productsWithStock = list.map((p: any) => {
+          const pId = p.productId || p.id;
+          return {
+            ...p,
+            stock: stockMap[pId] !== undefined ? stockMap[pId] : 10
+          };
+        });
 
         const inStockList = productsWithStock.filter((p: any) => {
           const stock = p.stock !== undefined ? p.stock : 10;
@@ -611,10 +625,31 @@ export const Marketplace: React.FC = () => {
       try {
         const res = await productService.getProducts({ limit: 100 });
         const list = res.data || res.products || (Array.isArray(res) ? res : []);
-        const inStockTrending = list.filter((p: any) => {
-          const stock = p.stock !== undefined ? p.stock : 10;
-          return stock > 0;
-        }).slice(0, 5);
+        
+        const productIds = list.map((p: any) => p.productId || p.id).filter(Boolean);
+        let stockMap: Record<string, number> = {};
+        if (productIds.length > 0) {
+          try {
+            const stockRes = await inventoryService.checkStockBatch(productIds);
+            const stockList = stockRes.data || stockRes || [];
+            if (Array.isArray(stockList)) {
+              stockList.forEach((s: any) => {
+                stockMap[s.productId] = s.exists ? s.availableStock : 10;
+              });
+            }
+          } catch (err) {
+            console.error('Error fetching batch stock in fetchTrending:', err);
+          }
+        }
+
+        const inStockTrending = list.map((p: any) => {
+          const pId = p.productId || p.id;
+          return {
+            ...p,
+            stock: stockMap[pId] !== undefined ? stockMap[pId] : 10
+          };
+        }).filter((p: any) => p.stock > 0).slice(0, 5);
+
         setTrendingProducts(inStockTrending);
       } catch (err) {
         console.error('Error loading trending products:', err);
@@ -758,6 +793,54 @@ export const Marketplace: React.FC = () => {
     searchQuery !== '' ||
     minPrice > priceLimits.min ||
     maxPrice < priceLimits.max;
+
+  const renderFilterSkeleton = () => (
+    <div className="flex flex-col items-stretch space-y-6 animate-pulse text-left w-full">
+      {/* Brand Skeleton */}
+      <div className="space-y-3 w-full">
+        <div className="h-3 w-16 bg-slate-200 rounded-md" />
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-slate-200 rounded" />
+            <div className="h-3.5 w-24 bg-slate-100 rounded" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-slate-200 rounded" />
+            <div className="h-3.5 w-16 bg-slate-100 rounded" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-slate-200 rounded" />
+            <div className="h-3.5 w-20 bg-slate-100 rounded" />
+          </div>
+        </div>
+      </div>
+
+      {/* Price Range Skeleton */}
+      <div className="space-y-3 w-full">
+        <div className="h-3 w-20 bg-slate-200 rounded-md" />
+        <div className="flex space-x-2 w-full">
+          <div className="h-8 bg-slate-100 rounded-lg flex-1" />
+          <div className="h-8 bg-slate-100 rounded-lg flex-1" />
+        </div>
+        <div className="h-1.5 bg-slate-200 rounded-full w-full mt-2" />
+      </div>
+
+      {/* Specifications Skeleton */}
+      <div className="space-y-3 w-full">
+        <div className="h-3 w-24 bg-slate-200 rounded-md" />
+        <div className="space-y-2">
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-slate-200 rounded" />
+            <div className="h-3.5 w-28 bg-slate-100 rounded" />
+          </div>
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-slate-200 rounded" />
+            <div className="h-3.5 w-20 bg-slate-100 rounded" />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const renderFilters = () => (
     <div className="flex flex-col items-stretch space-y-5.5">
@@ -1291,7 +1374,7 @@ export const Marketplace: React.FC = () => {
                   </button>
                 )}
               </div>
-              {renderFilters()}
+              {isLoading ? renderFilterSkeleton() : renderFilters()}
             </Card>
           </aside>
 
@@ -1549,7 +1632,7 @@ export const Marketplace: React.FC = () => {
               </button>
             )}
           </div>
-          {renderFilters()}
+          {isLoading ? renderFilterSkeleton() : renderFilters()}
           <Button
             variant="primary"
             size="sm"
