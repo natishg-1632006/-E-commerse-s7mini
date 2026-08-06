@@ -35,6 +35,7 @@ import { productService } from '../services/product.service';
 import { wishlistService } from '../services/wishlist.service';
 import { reviewService } from '../services/review.service';
 import { orderService } from '../services/order.service';
+import { inventoryService } from '../services/inventory.service';
 import { getImageUrl } from '../utils/imageHelper';
 
 const decodeJwtSub = (token: string): string | null => {
@@ -132,6 +133,20 @@ export const ProductDetail: React.FC = () => {
       try {
         const res = await productService.getProductById(id);
         const prod = res.data || res;
+        
+        // Fetch product stock from inventory service
+        let actualStock = 10;
+        try {
+          const stockRes = await inventoryService.checkStock(id);
+          const stockData = stockRes.data || stockRes;
+          if (stockData.exists) {
+            actualStock = stockData.availableStock;
+          }
+        } catch (stockErr) {
+          console.error('Error fetching stock for product detail page:', stockErr);
+        }
+        
+        prod.stock = actualStock;
         setProductData(prod);
         setActiveImageIdx(0);
 
@@ -168,7 +183,29 @@ export const ProductDetail: React.FC = () => {
         try {
           const catRes = await productService.getProducts({ limit: 100 });
           const catData = catRes.data || catRes.products || (Array.isArray(catRes) ? catRes : []);
-          setCatalogProducts(catData || []);
+          
+          const productsWithStock = await Promise.all(
+            catData.map(async (p: any) => {
+              const pId = p.productId || p.id;
+              try {
+                const stockRes = await inventoryService.checkStock(pId);
+                const data = stockRes.data || stockRes;
+                return {
+                  ...p,
+                  stock: data.exists ? data.availableStock : 10
+                };
+              } catch (err) {
+                console.error(`Error checking stock in detail recommendations for ${pId}:`, err);
+                return { ...p, stock: 10 };
+              }
+            })
+          );
+          
+          const inStockList = productsWithStock.filter((p: any) => {
+            const stock = p.stock !== undefined ? p.stock : 10;
+            return stock > 0;
+          });
+          setCatalogProducts(inStockList);
 
           // Fetch all reviews for bundle item rating calculations
           const reviews = await reviewService.getAllReviews();

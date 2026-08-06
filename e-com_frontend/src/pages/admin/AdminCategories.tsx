@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { categoryService } from '../../services/category.service';
 import type { CategoryImagePayload } from '../../services/category.service';
+import { productService } from '../../services/product.service';
 import { getImageUrl } from '../../utils/imageHelper';
 
 interface CategoryItem {
@@ -346,7 +347,43 @@ const AdminCategories: React.FC<AdminCategoriesProps> = ({ mode = 'list' }) => {
         }
       }
 
-      setCategories(fetchedList.map(mapCategoryToItem));
+      // Fetch products to count how many belong to each category
+      let productsList: any[] = [];
+      try {
+        const prodResponse = await productService.getProducts({ limit: 1000 });
+        if (prodResponse) {
+          if (Array.isArray(prodResponse)) {
+            productsList = prodResponse;
+          } else if (prodResponse.products && Array.isArray(prodResponse.products)) {
+            productsList = prodResponse.products;
+          } else if (prodResponse.data && Array.isArray(prodResponse.data)) {
+            productsList = prodResponse.data;
+          }
+        }
+      } catch (prodErr) {
+        console.error('Error fetching products for category counts:', prodErr);
+      }
+
+      const productsCountMap: Record<string, number> = {};
+      productsList.forEach((p: any) => {
+        if (p.categoryId) {
+          productsCountMap[p.categoryId] = (productsCountMap[p.categoryId] || 0) + 1;
+        }
+        if (p.category) {
+          const catNameLower = String(p.category).toLowerCase().trim();
+          productsCountMap[catNameLower] = (productsCountMap[catNameLower] || 0) + 1;
+        }
+      });
+
+      const mappedCategories = fetchedList.map((item) => {
+        const mapped = mapCategoryToItem(item);
+        const countFromId = productsCountMap[mapped.id] || 0;
+        const countFromName = productsCountMap[mapped.name.toLowerCase().trim()] || 0;
+        mapped.productsCount = countFromId || countFromName || 0;
+        return mapped;
+      });
+
+      setCategories(mappedCategories);
       setTotalCategories(totalCount);
       setTotalPages(Math.max(1, Math.ceil(totalCount / limit)));
       setErrorState(false);
@@ -389,6 +426,27 @@ const AdminCategories: React.FC<AdminCategoriesProps> = ({ mode = 'list' }) => {
           if (res) {
             const item = res.data || res.category || res;
             const mapped = mapCategoryToItem(item);
+
+            // Fetch products count for this category
+            try {
+              const prodResponse = await productService.getProducts({ limit: 1000 });
+              let productsList: any[] = [];
+              if (prodResponse) {
+                if (Array.isArray(prodResponse)) {
+                  productsList = prodResponse;
+                } else if (prodResponse.products && Array.isArray(prodResponse.products)) {
+                  productsList = prodResponse.products;
+                } else if (prodResponse.data && Array.isArray(prodResponse.data)) {
+                  productsList = prodResponse.data;
+                }
+              }
+              const countFromId = productsList.filter((p: any) => p.categoryId === mapped.id).length;
+              const countFromName = productsList.filter((p: any) => String(p.category).toLowerCase().trim() === mapped.name.toLowerCase().trim()).length;
+              mapped.productsCount = countFromId || countFromName || 0;
+            } catch (prodErr) {
+              console.error('Error fetching count for detail view:', prodErr);
+            }
+
             setName(mapped.name);
             setDescription(mapped.description);
             setFeatured(mapped.featured);

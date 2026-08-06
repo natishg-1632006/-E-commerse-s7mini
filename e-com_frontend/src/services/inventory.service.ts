@@ -47,6 +47,13 @@ class InventoryService {
     return response.data;
   }
 
+  async checkStock(productId: string, quantity: number = 1) {
+    const response = await inventoryApi.get(`/api/v1/inventory/check/${productId}`, {
+      params: { quantity }
+    });
+    return response.data;
+  }
+
   async updateInventoryThreshold(productId: string, threshold: number) {
     const response = await inventoryApi.put(`/api/v1/inventory/${productId}`, {
       lowStockThreshold: threshold

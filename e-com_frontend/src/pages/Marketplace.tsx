@@ -31,6 +31,7 @@ import heroBannerImg from '../assets/future_tech_banner.jpg';
 import { productService } from '../services/product.service';
 import { brandService } from '../services/brand.service';
 import { reviewService } from '../services/review.service';
+import { inventoryService } from '../services/inventory.service';
 import { getImageUrl } from '../utils/imageHelper';
 
 const formatCategoryName = (name: string) => {
@@ -279,7 +280,45 @@ export const Marketplace: React.FC = () => {
       try {
         const res = await productService.getCategories();
         const list = res.data || (Array.isArray(res) ? res : []);
-        setCategoriesList(list.filter((c: any) => (c.status || 'ACTIVE').toUpperCase() === 'ACTIVE'));
+        
+        // Fetch all products to count/verify category products in stock
+        let prodList: any[] = [];
+        try {
+          const prodRes = await productService.getProducts({ limit: 1000 });
+          const rawProdList = prodRes.data || prodRes.products || (Array.isArray(prodRes) ? prodRes : []);
+          
+          prodList = await Promise.all(
+            rawProdList.map(async (p: any) => {
+              const pId = p.productId || p.id;
+              try {
+                const stockRes = await inventoryService.checkStock(pId);
+                const data = stockRes.data || stockRes;
+                return {
+                  ...p,
+                  stock: data.exists ? data.availableStock : 10
+                };
+              } catch (err) {
+                console.error(`Error checking stock in categories list for ${pId}:`, err);
+                return { ...p, stock: 10 };
+              }
+            })
+          );
+        } catch (prodErr) {
+          console.error('Error fetching products for category filter:', prodErr);
+        }
+
+        const activeCategories = list.filter((c: any) => {
+          if ((c.status || 'ACTIVE').toUpperCase() !== 'ACTIVE') return false;
+          
+          // Verify category has at least 1 in-stock product
+          return prodList.some((p: any) => {
+            const isInCategory = p.categoryId === c.categoryId || p.categoryId === c.id || String(p.category || '').toLowerCase().trim() === String(c.name || '').toLowerCase().trim();
+            const stock = p.stock !== undefined ? p.stock : 10;
+            return isInCategory && stock > 0;
+          });
+        });
+
+        setCategoriesList(activeCategories);
       } catch (err) {
         console.error('Error fetching categories:', err);
       } finally {
@@ -338,7 +377,30 @@ export const Marketplace: React.FC = () => {
 
         const res = await productService.getProducts(params);
         const list = res.data || res.products || (Array.isArray(res) ? res : []);
-        setRawProducts(list);
+        
+        // Check real stock values in parallel
+        const productsWithStock = await Promise.all(
+          list.map(async (p: any) => {
+            const pId = p.productId || p.id;
+            try {
+              const stockRes = await inventoryService.checkStock(pId);
+              const data = stockRes.data || stockRes;
+              return {
+                ...p,
+                stock: data.exists ? data.availableStock : 10
+              };
+            } catch (err) {
+              console.error(`Error checking stock in fetchProducts for ${pId}:`, err);
+              return { ...p, stock: 10 };
+            }
+          })
+        );
+
+        const inStockList = productsWithStock.filter((p: any) => {
+          const stock = p.stock !== undefined ? p.stock : 10;
+          return stock > 0;
+        });
+        setRawProducts(inStockList);
         setCurrentPage(1);
       } catch (err) {
         console.error('Error fetching catalog products:', err);
@@ -547,9 +609,13 @@ export const Marketplace: React.FC = () => {
     const fetchTrending = async () => {
       setTrendingLoading(true);
       try {
-        const res = await productService.getProducts({ limit: 5 });
+        const res = await productService.getProducts({ limit: 100 });
         const list = res.data || res.products || (Array.isArray(res) ? res : []);
-        setTrendingProducts(list);
+        const inStockTrending = list.filter((p: any) => {
+          const stock = p.stock !== undefined ? p.stock : 10;
+          return stock > 0;
+        }).slice(0, 5);
+        setTrendingProducts(inStockTrending);
       } catch (err) {
         console.error('Error loading trending products:', err);
       } finally {
