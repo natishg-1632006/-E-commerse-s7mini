@@ -9,6 +9,10 @@ build/
 **/.serverless/
 coverage/
 **/coverage/
+.terraform/
+**/.terraform/
+*.tfstate
+*.tfstate.backup
 .DS_Store
 .vscode/
 .idea/
