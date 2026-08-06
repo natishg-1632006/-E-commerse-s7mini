@@ -61,3 +61,11 @@ module "messaging" {
   project_name = var.project_name
   environment  = var.environment
 }
+
+# 6. CloudWatch Dashboard Module: Provisions unified observability dashboard for all 12 microservices
+module "cloudwatch" {
+  source       = "./modules/cloudwatch"
+  project_name = var.project_name
+  environment  = var.environment
+  aws_region   = var.aws_region
+}

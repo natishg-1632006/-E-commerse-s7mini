@@ -49,3 +49,8 @@ output "notification_sqs_queue_url" {
   description = "SQS Queue URL for Notification Service"
   value       = module.messaging.notification_events_queue_url
 }
+
+output "cloudwatch_dashboard_name" {
+  description = "Unified CloudWatch Dashboard name visualizing microservice metrics"
+  value       = module.cloudwatch.dashboard_name
+}
