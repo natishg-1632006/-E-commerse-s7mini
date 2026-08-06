@@ -17,7 +17,7 @@ import AuthButton from '../../components/auth/AuthButton';
 import loginIllustration from '../../assets/auth/illustrations/login.png';
 
 export const Login: React.FC = () => {
-  const { mutate: login, isPending } = useLogin();
+  const { mutate: login, isPending, error, isError } = useLogin();
 
   const {
     register,
@@ -64,14 +64,14 @@ export const Login: React.FC = () => {
             type="email"
             label="Email Address"
             icon={Mail}
-            error={errors.email?.message}
+            error={errors.email?.message || (isError ? 'Please check your email address.' : undefined)}
             {...register('email')}
           />
 
           <PasswordInput
             id="password"
             label="Password"
-            error={errors.password?.message}
+            error={errors.password?.message || (isError ? ((error as any)?.message || 'Incorrect email or password. Please try again.') : undefined)}
             {...register('password')}
           />
 
