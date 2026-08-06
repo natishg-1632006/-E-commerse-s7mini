@@ -35,12 +35,12 @@ jobs:
 
       - name: Fetch Trigger History and Checkout
         run: |
-          # Fetch the triggering commit and its parent commit explicitly
-          git fetch --depth=2 origin ${{ github.event.workflow_run.head_sha }}
+          # Fetch the triggering branch history (last 100 commits)
+          git fetch --depth=100 origin ${{ github.event.workflow_run.head_branch }}
           
-          # If it is a Pull Request, fetch the base branch commit to allow diffing
-          if [ -n "${{ github.event.workflow_run.pull_requests[0].base.sha }}" ]; then
-            git fetch --depth=1 origin ${{ github.event.workflow_run.pull_requests[0].base.sha }}
+          # If it is a Pull Request, fetch the base branch history to allow diffing
+          if [ -n "${{ github.event.workflow_run.pull_requests[0].base.ref }}" ]; then
+            git fetch --depth=100 origin ${{ github.event.workflow_run.pull_requests[0].base.ref }}
           fi
           
           # Checkout the exact tested commit
