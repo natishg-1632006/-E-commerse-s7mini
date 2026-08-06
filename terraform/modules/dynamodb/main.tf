@@ -1,6 +1,6 @@
 # DynamoDB Table for User Service
 resource "aws_dynamodb_table" "users" {
-  name         = "${var.project_name}-users-${var.environment}"
+  name         = "natish_user"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "userId"
 
@@ -17,7 +17,7 @@ resource "aws_dynamodb_table" "users" {
 
 # DynamoDB Table for Product Service
 resource "aws_dynamodb_table" "products" {
-  name         = "${var.project_name}-products-${var.environment}"
+  name         = "natish_products"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "productId"
 
@@ -34,7 +34,7 @@ resource "aws_dynamodb_table" "products" {
 
 # DynamoDB Table for Category Service
 resource "aws_dynamodb_table" "categories" {
-  name         = "${var.project_name}-categories-${var.environment}"
+  name         = "natish_categories"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "categoryId"
 
@@ -51,7 +51,7 @@ resource "aws_dynamodb_table" "categories" {
 
 # DynamoDB Table for Cart Service
 resource "aws_dynamodb_table" "cart" {
-  name         = "${var.project_name}-cart-${var.environment}"
+  name         = "natish_cart"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "userId"
 
@@ -68,12 +68,12 @@ resource "aws_dynamodb_table" "cart" {
 
 # DynamoDB Table for Order Service
 resource "aws_dynamodb_table" "orders" {
-  name         = "${var.project_name}-orders-${var.environment}"
+  name         = "natish_orders"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "orderId"
+  hash_key     = "orderid"
 
   attribute {
-    name = "orderId"
+    name = "orderid"
     type = "S"
   }
 
@@ -85,12 +85,12 @@ resource "aws_dynamodb_table" "orders" {
 
 # DynamoDB Table for Payment Service
 resource "aws_dynamodb_table" "payments" {
-  name         = "${var.project_name}-payments-${var.environment}"
+  name         = "natish_payment"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "paymentId"
+  hash_key     = "paymentid"
 
   attribute {
-    name = "paymentId"
+    name = "paymentid"
     type = "S"
   }
 
@@ -102,7 +102,7 @@ resource "aws_dynamodb_table" "payments" {
 
 # DynamoDB Table for Inventory Service
 resource "aws_dynamodb_table" "inventory" {
-  name         = "${var.project_name}-inventory-${var.environment}"
+  name         = "natish_inventory_v2"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "productId"
 
@@ -119,12 +119,12 @@ resource "aws_dynamodb_table" "inventory" {
 
 # DynamoDB Table for Coupon Service
 resource "aws_dynamodb_table" "coupons" {
-  name         = "${var.project_name}-coupons-${var.environment}"
+  name         = "natish_coupons"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "couponId"
+  hash_key     = "couponCode"
 
   attribute {
-    name = "couponId"
+    name = "couponCode"
     type = "S"
   }
 
@@ -134,14 +134,20 @@ resource "aws_dynamodb_table" "coupons" {
   }
 }
 
-# DynamoDB Table for Wishlists
+# DynamoDB Table for Wishlists (Composite Key)
 resource "aws_dynamodb_table" "wishlists" {
-  name         = "${var.project_name}-wishlists-${var.environment}"
+  name         = "natish_wishlists"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "userId"
+  range_key    = "productId"
 
   attribute {
     name = "userId"
+    type = "S"
+  }
+
+  attribute {
+    name = "productId"
     type = "S"
   }
 
@@ -153,7 +159,7 @@ resource "aws_dynamodb_table" "wishlists" {
 
 # DynamoDB Table for Reviews
 resource "aws_dynamodb_table" "reviews" {
-  name         = "${var.project_name}-reviews-${var.environment}"
+  name         = "natish_reviews"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "reviewId"
 
@@ -170,7 +176,7 @@ resource "aws_dynamodb_table" "reviews" {
 
 # DynamoDB Table for Brands
 resource "aws_dynamodb_table" "brands" {
-  name         = "${var.project_name}-brands-${var.environment}"
+  name         = "natish_brands"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "brandId"
 
