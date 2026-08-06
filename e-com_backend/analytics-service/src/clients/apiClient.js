@@ -1,6 +1,6 @@
 const axios = require('axios');
-const http = require('http');
-const https = require('https');
+const http = require('node:http');
+const https = require('node:https');
 
 // Reusable HTTP and HTTPS agents with Keep-Alive enabled
 const httpAgent = new http.Agent({

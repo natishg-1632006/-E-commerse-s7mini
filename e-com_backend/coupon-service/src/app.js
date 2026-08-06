@@ -21,7 +21,13 @@ if (process.env.NODE_ENV !== 'test') {
 app.use(helmet());
 
 // Enable CORS
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGINS
+      ? process.env.ALLOWED_ORIGINS.split(',')
+      : ['https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173']
+  })
+);
 
 // Compression
 app.use(compression());
