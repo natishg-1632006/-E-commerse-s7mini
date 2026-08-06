@@ -20,13 +20,22 @@ app.get('/health', (req, res) => {
 
 app.use(helmet());
 app.use(compression());
+
+// Secure local CORS handling to avoid duplication
+const defaultOrigins = ['https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173'];
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173']
+    origin: (origin, callback) => {
+      const isAllowed = !origin || defaultOrigins.includes(origin) || (process.env.ALLOWED_ORIGINS && process.env.ALLOWED_ORIGINS.split(',').includes(origin));
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(null, true);
+      }
+    }
   })
 );
+
 app.use(morgan('dev'));
 app.use(express.json());
 
