@@ -22,23 +22,23 @@ resource "aws_cloudwatch_dashboard" "microservices_dashboard" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/Lambda", "Invocations", "FunctionName", "user-service-prod-api"],
-            [".", ".", ".", "product-service-prod-api"],
-            [".", ".", ".", "category-service-prod-api"],
-            [".", ".", ".", "cart-service-prod-api"],
-            [".", ".", ".", "order-service-prod-api"],
-            [".", ".", ".", "payment-service-prod-api"],
-            [".", ".", ".", "inventory-service-prod-api"],
-            [".", ".", ".", "coupon-service-prod-api"],
-            [".", ".", ".", "analytics-service-prod-api"],
-            [".", ".", ".", "notification-service-prod-api"],
-            [".", ".", ".", "cognito-trigger-service-prod-api"],
-            [".", ".", ".", "wishlist-review-service-prod-api"]
+            ["AWS/Lambda", "Invocations", "FunctionName", "natish_user_service_lambda"],
+            [".", ".", ".", "natish_product_service_lambda"],
+            [".", ".", ".", "natish_category_service_lambda"],
+            [".", ".", ".", "natish_cart_service_lambda"],
+            [".", ".", ".", "natish_order_service_lambda"],
+            [".", ".", ".", "natish_payment_service_lambda"],
+            [".", ".", ".", "natish_inventory_service_lambda"],
+            [".", ".", ".", "natish_coupon_service_lambda"],
+            [".", ".", ".", "natish_analytics_service_lambda"],
+            [".", ".", ".", "natish_notification_service_lambda"],
+            [".", ".", ".", "natish_cognito_trigger_service_lambda"],
+            [".", ".", ".", "natish_wishlist_review_service_lambda"]
           ]
           period = 300
           stat   = "Sum"
           region = var.aws_region
-          title  = "Microservices Lambda Invocations"
+          title  = "Lambda Invocations (5-Min Sum)"
         }
       },
       # Widget 2: Lambda Errors
@@ -50,23 +50,23 @@ resource "aws_cloudwatch_dashboard" "microservices_dashboard" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/Lambda", "Errors", "FunctionName", "user-service-prod-api"],
-            [".", ".", ".", "product-service-prod-api"],
-            [".", ".", ".", "category-service-prod-api"],
-            [".", ".", ".", "cart-service-prod-api"],
-            [".", ".", ".", "order-service-prod-api"],
-            [".", ".", ".", "payment-service-prod-api"],
-            [".", ".", ".", "inventory-service-prod-api"],
-            [".", ".", ".", "coupon-service-prod-api"],
-            [".", ".", ".", "analytics-service-prod-api"],
-            [".", ".", ".", "notification-service-prod-api"],
-            [".", ".", ".", "cognito-trigger-service-prod-api"],
-            [".", ".", ".", "wishlist-review-service-prod-api"]
+            ["AWS/Lambda", "Errors", "FunctionName", "natish_user_service_lambda"],
+            [".", ".", ".", "natish_product_service_lambda"],
+            [".", ".", ".", "natish_category_service_lambda"],
+            [".", ".", ".", "natish_cart_service_lambda"],
+            [".", ".", ".", "natish_order_service_lambda"],
+            [".", ".", ".", "natish_payment_service_lambda"],
+            [".", ".", ".", "natish_inventory_service_lambda"],
+            [".", ".", ".", "natish_coupon_service_lambda"],
+            [".", ".", ".", "natish_analytics_service_lambda"],
+            [".", ".", ".", "natish_notification_service_lambda"],
+            [".", ".", ".", "natish_cognito_trigger_service_lambda"],
+            [".", ".", ".", "natish_wishlist_review_service_lambda"]
           ]
           period = 300
           stat   = "Sum"
           region = var.aws_region
-          title  = "Microservices Lambda Errors"
+          title  = "Lambda Errors (5-Min Sum)"
         }
       },
       # Widget 3: Lambda Latency / Duration
@@ -78,23 +78,23 @@ resource "aws_cloudwatch_dashboard" "microservices_dashboard" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/Lambda", "Duration", "FunctionName", "user-service-prod-api"],
-            [".", ".", ".", "product-service-prod-api"],
-            [".", ".", ".", "category-service-prod-api"],
-            [".", ".", ".", "cart-service-prod-api"],
-            [".", ".", ".", "order-service-prod-api"],
-            [".", ".", ".", "payment-service-prod-api"],
-            [".", ".", ".", "inventory-service-prod-api"],
-            [".", ".", ".", "coupon-service-prod-api"],
-            [".", ".", ".", "analytics-service-prod-api"],
-            [".", ".", ".", "notification-service-prod-api"],
-            [".", ".", ".", "cognito-trigger-service-prod-api"],
-            [".", ".", ".", "wishlist-review-service-prod-api"]
+            ["AWS/Lambda", "Duration", "FunctionName", "natish_user_service_lambda"],
+            [".", ".", ".", "natish_product_service_lambda"],
+            [".", ".", ".", "natish_category_service_lambda"],
+            [".", ".", ".", "natish_cart_service_lambda"],
+            [".", ".", ".", "natish_order_service_lambda"],
+            [".", ".", ".", "natish_payment_service_lambda"],
+            [".", ".", ".", "natish_inventory_service_lambda"],
+            [".", ".", ".", "natish_coupon_service_lambda"],
+            [".", ".", ".", "natish_analytics_service_lambda"],
+            [".", ".", ".", "natish_notification_service_lambda"],
+            [".", ".", ".", "natish_cognito_trigger_service_lambda"],
+            [".", ".", ".", "natish_wishlist_review_service_lambda"]
           ]
           period = 300
           stat   = "Average"
           region = var.aws_region
-          title  = "Microservices Duration / Latency (ms)"
+          title  = "Average Latency (5-Min Avg Milliseconds)"
         }
       },
       # Widget 4: Lambda Throttles
@@ -106,23 +106,23 @@ resource "aws_cloudwatch_dashboard" "microservices_dashboard" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/Lambda", "Throttles", "FunctionName", "user-service-prod-api"],
-            [".", ".", ".", "product-service-prod-api"],
-            [".", ".", ".", "category-service-prod-api"],
-            [".", ".", ".", "cart-service-prod-api"],
-            [".", ".", ".", "order-service-prod-api"],
-            [".", ".", ".", "payment-service-prod-api"],
-            [".", ".", ".", "inventory-service-prod-api"],
-            [".", ".", ".", "coupon-service-prod-api"],
-            [".", ".", ".", "analytics-service-prod-api"],
-            [".", ".", ".", "notification-service-prod-api"],
-            [".", ".", ".", "cognito-trigger-service-prod-api"],
-            [".", ".", ".", "wishlist-review-service-prod-api"]
+            ["AWS/Lambda", "Throttles", "FunctionName", "natish_user_service_lambda"],
+            [".", ".", ".", "natish_product_service_lambda"],
+            [".", ".", ".", "natish_category_service_lambda"],
+            [".", ".", ".", "natish_cart_service_lambda"],
+            [".", ".", ".", "natish_order_service_lambda"],
+            [".", ".", ".", "natish_payment_service_lambda"],
+            [".", ".", ".", "natish_inventory_service_lambda"],
+            [".", ".", ".", "natish_coupon_service_lambda"],
+            [".", ".", ".", "natish_analytics_service_lambda"],
+            [".", ".", ".", "natish_notification_service_lambda"],
+            [".", ".", ".", "natish_cognito_trigger_service_lambda"],
+            [".", ".", ".", "natish_wishlist_review_service_lambda"]
           ]
           period = 300
           stat   = "Sum"
           region = var.aws_region
-          title  = "Microservices Throttles"
+          title  = "Lambda Throttles (5-Min Sum)"
         }
       }
     ]
