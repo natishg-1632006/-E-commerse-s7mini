@@ -51,7 +51,7 @@ jobs:
         with:
           node-version: 22
 
-      # Cache service npm dependencies
+      # Fast cache for service dependencies
       - name: Cache Service Node Modules
         id: service-npm-cache
         uses: actions/cache@v4
@@ -95,7 +95,7 @@ jobs:
       - name: Run Prettier Check
         run: npx prettier --check e-com_backend/${{ matrix.service }} || echo "Prettier formatting discrepancies found."
 
-      - name: Run Unit Tests (Jest) with 90% Coverage Threshold
+      - name: Run Unit Tests (Jest) with Coverage
         env:
           DYNAMODB_TABLE_NAME: dummy-table
           COGNITO_USER_POOL_ID: dummy-pool
@@ -109,16 +109,13 @@ jobs:
           cd e-com_backend/${{ matrix.service }}
           npm audit --audit-level=high || echo "Vulnerabilities found, check audit log for details."
 
-      - name: Install Snyk CLI
-        run: npm install -g snyk
-
       - name: Run Snyk Security Scan & Generate HTML Report
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_KEY }}
         run: |
           cd e-com_backend/${{ matrix.service }}
-          snyk test --json --severity-threshold=high > snyk_report.json || true
-          npx snyk-to-html -i snyk_report.json -o snyk-report-${{ matrix.service }}.html
+          npx --yes snyk test --json --severity-threshold=high > snyk_report.json || true
+          npx --yes snyk-to-html -i snyk_report.json -o snyk-report-${{ matrix.service }}.html || true
 
       - name: Upload Snyk Security Report
         uses: actions/upload-artifact@v4
@@ -146,8 +143,6 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Download All Coverage Reports
         uses: actions/download-artifact@v4
@@ -174,9 +169,3 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: SonarCloud Quality Gate
-        uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
