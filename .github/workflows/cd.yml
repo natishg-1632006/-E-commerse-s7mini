@@ -30,11 +30,14 @@ jobs:
       wishlist-review-service: ${{ steps.filter.outputs.wishlist-review-service }}
       changed-list: ${{ steps.filter.outputs.changes }}
     steps:
-      - name: Checkout Code
+      - name: Checkout Trigger Branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
+
+      - name: Checkout Exact Commit SHA
+        run: git checkout ${{ github.event.workflow_run.head_sha }}
 
       - name: Filter Paths
         id: filter
