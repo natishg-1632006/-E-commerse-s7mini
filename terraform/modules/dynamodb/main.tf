@@ -1,4 +1,21 @@
-# DynamoDB Table for User Service
+# ==============================================================================
+# DynamoDB Tables Module for Natish Microservices Platform
+# ==============================================================================
+# All table names and schema keys match serverless.yml specifications:
+# 1. User Service          -> natish_user (HashKey: userId)
+# 2. Product Service       -> natish_products (HashKey: productId)
+# 3. Category Service      -> natish_categories (HashKey: categoryId)
+# 4. Cart Service          -> natish_cart (HashKey: userId)
+# 5. Order Service         -> natish_orders (HashKey: orderid - lowercase)
+# 6. Payment Service       -> natish_payment (HashKey: paymentid - lowercase)
+# 7. Inventory Service     -> natish_inventory_v2 (HashKey: productId)
+# 8. Coupon Service        -> natish_coupons (HashKey: couponCode)
+# 9. Wishlist Service      -> natish_wishlists (Composite: userId + productId)
+# 10. Review Service       -> natish_reviews (HashKey: reviewId)
+# 11. Brand Service        -> natish_brands (HashKey: brandId)
+# ==============================================================================
+
+# 1. User Service Table
 resource "aws_dynamodb_table" "users" {
   name         = "natish_user"
   billing_mode = "PAY_PER_REQUEST"
@@ -15,7 +32,7 @@ resource "aws_dynamodb_table" "users" {
   }
 }
 
-# DynamoDB Table for Product Service
+# 2. Product Service Table
 resource "aws_dynamodb_table" "products" {
   name         = "natish_products"
   billing_mode = "PAY_PER_REQUEST"
@@ -32,7 +49,7 @@ resource "aws_dynamodb_table" "products" {
   }
 }
 
-# DynamoDB Table for Category Service
+# 3. Category Service Table
 resource "aws_dynamodb_table" "categories" {
   name         = "natish_categories"
   billing_mode = "PAY_PER_REQUEST"
@@ -49,7 +66,7 @@ resource "aws_dynamodb_table" "categories" {
   }
 }
 
-# DynamoDB Table for Cart Service
+# 4. Cart Service Table
 resource "aws_dynamodb_table" "cart" {
   name         = "natish_cart"
   billing_mode = "PAY_PER_REQUEST"
@@ -66,7 +83,7 @@ resource "aws_dynamodb_table" "cart" {
   }
 }
 
-# DynamoDB Table for Order Service
+# 5. Order Service Table (Uses lowercase orderid as partition key)
 resource "aws_dynamodb_table" "orders" {
   name         = "natish_orders"
   billing_mode = "PAY_PER_REQUEST"
@@ -83,7 +100,7 @@ resource "aws_dynamodb_table" "orders" {
   }
 }
 
-# DynamoDB Table for Payment Service
+# 6. Payment Service Table (Uses lowercase paymentid as partition key)
 resource "aws_dynamodb_table" "payments" {
   name         = "natish_payment"
   billing_mode = "PAY_PER_REQUEST"
@@ -100,7 +117,7 @@ resource "aws_dynamodb_table" "payments" {
   }
 }
 
-# DynamoDB Table for Inventory Service
+# 7. Inventory Service Table (Uses natish_inventory_v2 as table name)
 resource "aws_dynamodb_table" "inventory" {
   name         = "natish_inventory_v2"
   billing_mode = "PAY_PER_REQUEST"
@@ -117,7 +134,7 @@ resource "aws_dynamodb_table" "inventory" {
   }
 }
 
-# DynamoDB Table for Coupon Service
+# 8. Coupon Service Table (Uses couponCode as partition key)
 resource "aws_dynamodb_table" "coupons" {
   name         = "natish_coupons"
   billing_mode = "PAY_PER_REQUEST"
@@ -134,7 +151,7 @@ resource "aws_dynamodb_table" "coupons" {
   }
 }
 
-# DynamoDB Table for Wishlists (Composite Key)
+# 9. Wishlist Service Table (Composite Key: userId + productId)
 resource "aws_dynamodb_table" "wishlists" {
   name         = "natish_wishlists"
   billing_mode = "PAY_PER_REQUEST"
@@ -157,7 +174,7 @@ resource "aws_dynamodb_table" "wishlists" {
   }
 }
 
-# DynamoDB Table for Reviews
+# 10. Review Service Table
 resource "aws_dynamodb_table" "reviews" {
   name         = "natish_reviews"
   billing_mode = "PAY_PER_REQUEST"
@@ -174,7 +191,7 @@ resource "aws_dynamodb_table" "reviews" {
   }
 }
 
-# DynamoDB Table for Brands
+# 11. Brand Service Table
 resource "aws_dynamodb_table" "brands" {
   name         = "natish_brands"
   billing_mode = "PAY_PER_REQUEST"
