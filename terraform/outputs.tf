@@ -26,3 +26,13 @@ output "cognito_client_id" {
   description = "Cognito User Pool App Client ID"
   value       = module.cognito.user_pool_client_id
 }
+
+output "payment_events_sns_topic_arn" {
+  description = "SNS Topic ARN for Payment & Order Events"
+  value       = module.messaging.payment_events_topic_arn
+}
+
+output "notification_sqs_queue_url" {
+  description = "SQS Queue URL for Notification Service"
+  value       = module.messaging.notification_queue_url
+}

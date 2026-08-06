@@ -12,6 +12,32 @@ resource "aws_cognito_user_pool" "user_pool" {
     require_uppercase = true
   }
 
+  schema {
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    name                     = "email"
+    required                 = true
+
+    string_attribute_constraints {
+      min_length = 5
+      max_length = 256
+    }
+  }
+
+  schema {
+    attribute_data_type      = "String"
+    developer_only_attribute = false
+    mutable                  = true
+    name                     = "name"
+    required                 = false
+
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 256
+    }
+  }
+
   tags = {
     Environment = var.environment
     Project     = var.project_name
@@ -26,6 +52,7 @@ resource "aws_cognito_user_pool_client" "client" {
   explicit_auth_flows = [
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH",
-    "ALLOW_USER_PASSWORD_AUTH"
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_ADMIN_USER_PASSWORD_AUTH"
   ]
 }

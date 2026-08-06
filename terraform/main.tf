@@ -42,3 +42,10 @@ module "cognito" {
   project_name = var.project_name
   environment  = var.environment
 }
+
+# 5. SNS & SQS Event Messaging
+module "messaging" {
+  source       = "./modules/messaging"
+  project_name = var.project_name
+  environment  = var.environment
+}
