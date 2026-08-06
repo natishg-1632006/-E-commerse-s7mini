@@ -13,11 +13,11 @@ variable "environment" {
 variable "project_name" {
   description = "Name of the project used for tagging and resource naming"
   type        = string
-  default     = "e-commerce"
+  default     = "natish"
 }
 
 variable "frontend_bucket_name" {
   description = "Name of the S3 bucket hosting the static frontend"
   type        = string
-  default     = "natish-frontend-app-bucket"
+  default     = "natish-frontend"
 }

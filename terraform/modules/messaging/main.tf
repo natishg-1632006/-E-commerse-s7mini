@@ -1,6 +1,6 @@
 # SNS Topic for Payment Events
 resource "aws_sns_topic" "payment_events" {
-  name = "payment-events"
+  name = "natish-payment-events"
 
   tags = {
     Environment = var.environment
