@@ -57,7 +57,7 @@ const createClient = (baseURL) => {
       if (isTransient && config.__retryCount < maxRetries) {
         config.__retryCount += 1;
         // Exponential backoff: 200ms, 400ms, 800ms + random jitter
-        const jitter = crypto.randomInt ? crypto.randomInt(0, 50) : Math.floor(Math.random() * 50);
+        const jitter = crypto.randomInt(0, 50);
         const backoffDelay = Math.pow(2, config.__retryCount) * 100 + jitter;
 
         console.warn(
