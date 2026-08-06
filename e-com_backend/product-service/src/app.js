@@ -20,11 +20,14 @@ app.get('/health', (req, res) => {
 
 app.use(helmet());
 app.use(compression());
+// Product CORS config
+const prodAllowed = ['https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173'];
 app.use(
   cors({
-    origin: process.env.ALLOWED_ORIGINS
-      ? process.env.ALLOWED_ORIGINS.split(',')
-      : ['https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173']
+    origin: (origin, cb) => {
+      const allowed = !origin || prodAllowed.includes(origin) || (process.env.ALLOWED_ORIGINS && process.env.ALLOWED_ORIGINS.split(',').includes(origin));
+      cb(null, allowed);
+    }
   })
 );
 app.use(morgan('dev'));

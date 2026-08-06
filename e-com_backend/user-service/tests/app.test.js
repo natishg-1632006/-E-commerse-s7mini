@@ -72,6 +72,6 @@ describe('app.js HTTP Endpoints and CORS registration', () => {
     const disallowedRes = await request(app)
       .get('/api')
       .set('Origin', 'https://disallowed.com');
-    expect(disallowedRes.headers['access-control-allow-origin']).toBe('https://disallowed.com');
+    expect(disallowedRes.headers['access-control-allow-origin']).toBeUndefined();
   });
 });

@@ -30,7 +30,7 @@ app.use(
       if (isAllowed) {
         callback(null, true);
       } else {
-        callback(null, true);
+        callback(null, false);
       }
     }
   })
