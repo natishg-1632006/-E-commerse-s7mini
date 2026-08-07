@@ -1,872 +1,115 @@
-# Tech Product E-Commerce Microservices Backend
+# ⚡ E-Commerce Platform - Microservices Backend Engine
 
-![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=node.js)
-![Express.js](https://img.shields.io/badge/Express.js-4.x-000000?style=for-the-badge&logo=express)
-![AWS DynamoDB](https://img.shields.io/badge/AWS-DynamoDB-232F3E?style=for-the-badge&logo=amazonaws)
-![REST API](https://img.shields.io/badge/API-REST%20Microservices-ff6b6b?style=for-the-badge)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-
-A scalable, production-ready backend for a tech product e-commerce platform built with Node.js, Express.js, AWS DynamoDB, and microservices architecture.
-
-## 1. Project Overview
-
-This project demonstrates a modern backend design where every core business capability is separated into its own independent service. Instead of building one large monolithic application, the platform is divided into specialized services for products, inventory, cart, orders, and payments.
-
-### Why Microservices?
-
-Microservices are used to make the platform:
-
-- Easier to scale independently
-- Simpler to maintain and debug
-- Safer to evolve over time
-- Better suited for future growth and team collaboration
-
-### Benefits of This Architecture
-
-- Independent deployment of each service
-- Clear separation of business responsibilities
-- Better fault isolation
-- Easier integration with cloud services like AWS DynamoDB
-- Great foundation for future API gateways, authentication, and event-driven systems
-
-### Future Scalability
-
-This architecture can grow into a large e-commerce platform by adding services such as authentication, user management, notifications, reviews, warehouse operations, and analytics.
+> Production-grade, event-driven serverless backend architecture built with **Node.js 20**, **Express.js**, **AWS Lambda**, **Amazon DynamoDB**, **Amazon Cognito**, **Amazon SNS/SQS**, **AWS X-Ray**, and **Terraform IaC**.
 
 ---
 
-## 2. Architecture Diagram
+## 🛠️ Technology Stack & Key Dependencies
 
-```text
-                    Frontend (React / Next.js)
-
-                           │
-                           ▼
-
-                    API Requests
-
-                           │
-
-────────────────────────────────────────────────────────────
-
-      Product Service      :5001
-              │
-              ▼
-
-     Inventory Service     :5005
-              │
-              ▼
-
-        Cart Service       :5002
-              │
-              ▼
-
-       Order Service       :5003
-              │
-              ▼
-
-      Payment Service      :5004
-
-────────────────────────────────────────────────────────────
-
-                AWS DynamoDB
-```
+* **Runtime & Framework**: Node.js 20.x, Express.js (`serverless-http` AWS Lambda adapter).
+* **Database**: Amazon DynamoDB (Single & Composite Partition/Sort Keys, pay-per-request billing).
+* **Authentication**: AWS Cognito User Pool (`natish-user-pool`) & JWT Verification (`aws-jwt-verify`).
+* **Event Messaging**: Amazon SNS Topic (`natish-payment-events`) & 5 SQS Queues (`natish-inventory-payment-events`, `natish-notification-events`, etc.).
+* **Security & Quality**: CORS origin validation, Snyk SAST vulnerability scanning, SonarCloud Quality Gate compliance.
+* **Observability**: AWS X-Ray segment tracing (`AWSXRay.captureAWSv3Client`) and CloudWatch Dashboard (`natish-microservices-dashboard`).
 
 ---
 
-## 3. Technology Stack
-
-### Backend
-
-- Node.js
-- Express.js
-- REST APIs
-- Axios for inter-service communication
-
-### Database
-
-- AWS DynamoDB
-- DynamoDB Document Client
-- AWS SDK v3
-
-### Validation & Security
-
-- Express Validator
-- Helmet
-- CORS
-
-### Performance & Logging
-
-- Compression
-- Morgan
-- dotenv
-
-### Utilities
-
-- UUID
-- Environment-based configuration
-
----
-
-## 4. Project Structure
+## 📦 12 Microservices Overview & Schema Architecture
 
 ```text
 e-com_backend/
-├── product-service/
-├── inventory-service/
-├── cart-service/
-├── order-service/
-├── payment-service/
-└── README.md
+├── analytics-service/            # Sales analytics & metric reporting (natish_user/orders metrics)
+├── cart-service/                 # Shopping cart state & subtotal engine (natish_cart)
+├── category-service/             # Taxonomy & category tree management (natish_categories)
+├── cognito-trigger-service/      # AWS Cognito Pre-Sign-Up & Post-Confirmation triggers
+├── coupon-service/               # Discount code validation & apply engine (natish_coupons)
+├── inventory-service/            # Stock reservation & movements tracking (natish_inventory_v2)
+├── notification-service/         # Asynchronous customer email dispatch (natish-notification-events SQS)
+├── order-service/                # Order placement, status tracking & lifecycle (natish_orders)
+├── payment-service/              # Transaction processing & SNS event dispatching (natish_payment)
+├── product-service/              # Product catalog CRUD, search & filtering (natish_products)
+├── user-service/                 # User profile & account preferences (natish_user)
+└── wishlist-review-service/      # Wishlists, ratings & reviews (natish_wishlists / natish_reviews)
 ```
 
-### Service-Level Structure
+### Microservices Detailed Table
 
-Each service follows a clean layered structure:
+| Service Name | Primary Responsibility | Target DynamoDB Table | Partition Key (Hash) | Sort Key (Range) | API Route Base |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **`user-service`** | Profile management & user data | `natish_user` | `userId` (S) | — | `/api/v1/users` |
+| **`product-service`** | Catalog CRUD, search & category filter | `natish_products` | `productId` (S) | — | `/api/v1/products` |
+| **`category-service`** | Category hierarchy management | `natish_categories` | `categoryId` (S) | — | `/api/v1/categories` |
+| **`cart-service`** | User shopping cart state & items | `natish_cart` | `userId` (S) | — | `/api/v1/cart` |
+| **`order-service`** | Order placement & status lifecycle | `natish_orders` | `orderid` (S) | — | `/api/v1/orders` |
+| **`payment-service`** | Transaction execution & SNS publish | `natish_payment` | `paymentid` (S) | — | `/api/v1/payments` |
+| **`inventory-service`**| Stock reservations & SQS event consumer | `natish_inventory_v2` | `productId` (S) | — | `/api/v1/inventory` |
+| **`coupon-service`** | Promo code validation & discounts | `natish_coupons` | `couponCode` (S) | — | `/api/v1/coupons` |
+| **`analytics-service`** | Metrics calculation & reporting | — | — | — | `/api/v1/analytics` |
+| **`cognito-trigger-service`**| Cognito user onboarding hooks | — | — | — | AWS Cognito Hook |
+| **`notification-service`**| Email dispatch SQS consumer | — | — | — | SQS Queue Consumer |
+| **`wishlist-review-service`**| Wishlists, product ratings & reviews | `natish_wishlists`<br>`natish_reviews`<br>`natish_brands` | `userId` (S)<br>`reviewId` (S)<br>`brandId` (S) | `productId` (S)<br>—<br>— | `/api/v1/wishlists`<br>`/api/v1/reviews`<br>`/api/v1/brands` |
+
+---
+
+## 🔄 End-to-End Microservice Data Flow
 
 ```text
-service-name/
-├── server.js
-├── package.json
-├── src/
-│   ├── app.js
-│   ├── controllers/
-│   ├── routes/
-│   ├── services/
-│   ├── validations/
-│   ├── middleware/
-│   └── utils/
-```
+1. Customer Browses Products
+   [Frontend] ──GET /api/v1/products──> [product-service] ──Reads──> [DynamoDB: natish_products]
 
-This structure keeps the codebase organized using:
+2. Customer Adds Item to Cart
+   [Frontend] ──POST /api/v1/cart/add──> [cart-service] ──Persists──> [DynamoDB: natish_cart]
 
-- MVC-style separation
-- Service layer for business logic
-- Route handlers for API endpoints
-- Validation middleware
-- Utility modules for AWS and inter-service calls
+3. Customer Places Order & Checkout
+   [Frontend] ──POST /api/v1/orders──> [order-service] ──Validates Stock──> [inventory-service]
+   [order-service] ──Creates Order (PENDING)──> [DynamoDB: natish_orders]
 
----
+4. Payment Processing & Event Fanout
+   [Frontend] ──POST /api/v1/payments──> [payment-service] ──Saves Payment──> [DynamoDB: natish_payment]
+   [payment-service] ──Publishes Event──> [SNS: natish-payment-events]
 
-## 5. Microservices
-
-### Product Service
-
-- Port: 5001
-- Purpose: Manages product catalog data.
-- Responsibilities:
-  - Create, read, update, and delete products
-  - Search and filter products
-  - Serve product information to other services
-- Database Table: Products (configured via DynamoDB table environment variable)
-- Features:
-  - Product CRUD
-  - Search and pagination
-  - Category, brand, and price filtering
-- REST APIs:
-  - GET /api/products
-  - GET /api/products/:id
-  - GET /api/products/search
-  - POST /api/products
-  - PUT /api/products/:id
-  - DELETE /api/products/:id
-- Folder Structure:
-  - controllers/productController.js
-  - services/productService.js
-  - routes/productRoutes.js
-- Data Flow:
-  - Admin creates a product
-  - Product is stored in DynamoDB
-  - Inventory and cart services can request product details
-
-### Inventory Service
-
-- Port: 5005
-- Purpose: Manages stock and inventory operations.
-- Responsibilities:
-  - Track current stock
-  - Reserve stock during checkout
-  - Release stock on failure or refund
-  - Report low-stock and out-of-stock items
-- Database Table: Inventories (configured via DynamoDB table environment variable)
-- Business Rules:
-  - One inventory record per product
-  - Stock cannot go negative
-  - Reserve stock before payment confirmation
-  - Reduce stock only after successful payment
-- Stock Flow:
-  - Initial stock is created
-  - Stock can be increased or decreased
-  - Orders reserve stock
-  - Payment success reduces stock permanently
-- REST APIs:
-  - GET /api/inventory
-  - GET /api/inventory/:productId
-  - GET /api/inventory/low-stock
-  - GET /api/inventory/check/:productId
-  - POST /api/inventory
-  - POST /api/inventory/increase
-  - POST /api/inventory/decrease
-  - POST /api/inventory/reserve
-  - POST /api/inventory/release
-  - PATCH /api/inventory/reduce-stock
-  - PUT /api/inventory/:productId
-  - DELETE /api/inventory/:productId
-- Folder Structure:
-  - services/inventoryService.js
-  - utils/productApi.js
-  - utils/createTables.js
-- Communication:
-  - Calls the Product Service to verify that a product exists before creating inventory
-
-### Cart Service
-
-- Port: 5002
-- Purpose: Handles shopping cart behavior for users.
-- Responsibilities:
-  - Add items to cart
-  - Update item quantities
-  - Remove items
-  - Clear cart
-  - Retrieve cart contents
-- REST APIs:
-  - POST /api/cart/add
-  - PUT /api/cart/update
-  - DELETE /api/cart/remove/:userId/:productId
-  - DELETE /api/cart/clear/:userId
-  - GET /api/cart/:userId
-- Communication:
-  - Validates products from the Product Service
-  - Checks stock availability using product data before adding items
-
-### Order Service
-
-- Port: 5003
-- Purpose: Orchestrates order creation and order lifecycle management.
-- Responsibilities:
-  - Create orders from cart data
-  - Validate stock before order confirmation
-  - Track order status
-  - Cancel orders
-- REST APIs:
-  - POST /api/orders
-  - GET /api/orders
-  - GET /api/orders/user/:userId
-  - GET /api/orders/:id
-  - PUT /api/orders/:id/status
-  - PUT /api/orders/:id/cancel
-- Communication:
-  - Calls the Cart Service to retrieve cart details
-  - Calls the Inventory Service to validate stock before placing orders
-
-### Payment Service
-
-- Port: 5004
-- Purpose: Handles payment processing and payment lifecycle.
-- Responsibilities:
-  - Create payment records for an order
-  - Update payment status
-  - Confirm payment and reduce inventory
-  - Release stock on failure or refund
-- REST APIs:
-  - POST /api/payment/create
-  - GET /api/payment/order/:orderId
-  - GET /api/payment/:id
-  - PUT /api/payment/:id/status
-- Communication:
-  - Reads order information from the Order Service
-  - Calls the Inventory Service to reduce or release stock
-
----
-
-## 6. API Flow
-
-```text
-Admin creates Product
-        ↓
-Admin creates Inventory
-        ↓
-Customer views Products
-        ↓
-Customer adds Product to Cart
-        ↓
-Inventory Check
-        ↓
-Customer places Order
-        ↓
-Reserve Stock
-        ↓
-Payment
-        ↓
-Reduce Stock
-        ↓
-Order Completed
-```
-
-### End-to-End Flow
-
-1. A product is created in the Product Service.
-2. Inventory is registered for that product in the Inventory Service.
-3. A customer browses products and adds items to the cart.
-4. The Order Service validates stock and creates an order.
-5. The Payment Service processes payment.
-6. On successful payment, the Inventory Service reduces stock.
-7. The order is marked complete and the transaction is recorded.
-
----
-
-## 7. Database Design
-
-The system uses AWS DynamoDB tables to store data independently per domain.
-
-### Product Table
-
-- Partition Key: productId
-- Attributes:
-  - productId
-  - name
-  - description
-  - brand
-  - category
-  - price
-  - images
-  - specifications
-  - createdAt
-  - updatedAt
-
-Example:
-
-```json
-{
-  "productId": "prod-001",
-  "name": "Laptop Pro 14",
-  "brand": "TechBrand",
-  "category": "Laptops",
-  "price": 1299.99,
-  "description": "High-performance laptop",
-  "images": ["/images/laptop.png"],
-  "specifications": {
-    "processor": "Intel i7",
-    "ram": "16GB"
-  },
-  "createdAt": "2026-06-29T10:00:00.000Z"
-}
-```
-
-### Inventory Table
-
-- Partition Key: Inventoryid
-- Attributes:
-  - Inventoryid
-  - productId
-  - currentStock
-  - reservedStock
-  - availableStock
-  - lowStockThreshold
-  - status
-  - lastUpdated
-
-Example:
-
-```json
-{
-  "Inventoryid": "inv-001",
-  "productId": "prod-001",
-  "currentStock": 50,
-  "reservedStock": 5,
-  "availableStock": 45,
-  "lowStockThreshold": 10,
-  "status": "In Stock"
-}
-```
-
-### Cart Table
-
-- Partition Key: cartid
-- Attributes:
-  - cartid
-  - userId
-  - items
-  - totalAmount
-
-Example:
-
-```json
-{
-  "cartid": "cart-001",
-  "userId": "user-123",
-  "items": [
-    {
-      "productId": "prod-001",
-      "name": "Laptop Pro 14",
-      "price": 1299.99,
-      "quantity": 1,
-      "subtotal": 1299.99
-    }
-  ],
-  "totalAmount": 1299.99
-}
-```
-
-### Order Table
-
-- Partition Key: orderid
-- Attributes:
-  - orderid
-  - userId
-  - items
-  - shippingAddress
-  - paymentMethod
-  - paymentStatus
-  - orderStatus
-  - inventoryUpdated
-  - totalAmount
-  - createdAt
-
-Example:
-
-```json
-{
-  "orderid": "order-001",
-  "userId": "user-123",
-  "items": [
-    {
-      "productId": "prod-001",
-      "name": "Laptop Pro 14",
-      "price": 1299.99,
-      "quantity": 1,
-      "subtotal": 1299.99
-    }
-  ],
-  "paymentStatus": "Pending",
-  "orderStatus": "Pending",
-  "inventoryUpdated": false,
-  "totalAmount": 1299.99
-}
-```
-
-### Payment Table
-
-- Partition Key: paymentid
-- Attributes:
-  - paymentid
-  - orderId
-  - userId
-  - amount
-  - paymentMethod
-  - transactionId
-  - status
-  - createdAt
-
-Example:
-
-```json
-{
-  "paymentid": "pay-001",
-  "orderId": "order-001",
-  "userId": "user-123",
-  "amount": 1299.99,
-  "paymentMethod": "COD",
-  "transactionId": "COD-ABC123",
-  "status": "Pending"
-}
+5. Asynchronous Event Consumption (SQS Fanout)
+   ├── [SNS: natish-payment-events] ──> [SQS: natish-order-payment-events] ──> [order-service] (Updates order to PAID)
+   ├── [SNS: natish-payment-events] ──> [SQS: natish-inventory-payment-events] ──> [inventory-service] (Deducts reserved stock)
+   └── [SNS: natish-payment-events] ──> [SQS: natish-notification-events] ──> [notification-service] (Sends email receipt)
 ```
 
 ---
 
-## 8. REST API Documentation
-
-Base URL for each service is typically:
-
-- Product Service: http://localhost:5001
-- Cart Service: http://localhost:5002
-- Order Service: http://localhost:5003
-- Payment Service: http://localhost:5004
-- Inventory Service: http://localhost:5005
-
-### Product APIs
-
-#### POST /api/products
-
-Create a new product.
-
-Request body:
-
-```json
-{
-  "name": "Laptop Pro 14",
-  "description": "High-performance laptop",
-  "brand": "TechBrand",
-  "category": "Laptops",
-  "price": 1299.99
-}
-```
-
-Response:
-
-```json
-{
-  "success": true,
-  "data": {
-    "productId": "prod-001",
-    "message": "Product created successfully"
-  }
-}
-```
-
-#### GET /api/products
-
-Get all products with optional query filters.
-
-#### GET /api/products/:id
-
-Get a single product by ID.
-
-#### GET /api/products/search
-
-Search products by keyword.
-
-#### PUT /api/products/:id
-
-Update an existing product.
-
-#### DELETE /api/products/:id
-
-Delete a product by ID.
-
-### Inventory APIs
-
-#### POST /api/inventory
-
-Create inventory for a product.
-
-Request body:
-
-```json
-{
-  "productId": "prod-001",
-  "currentStock": 50,
-  "lowStockThreshold": 10
-}
-```
-
-#### GET /api/inventory
-
-Get all inventory records.
-
-#### GET /api/inventory/:productId
-
-Get inventory for a specific product.
-
-#### GET /api/inventory/check/:productId
-
-Check if stock is available for a requested quantity.
-
-#### POST /api/inventory/increase
-
-Increase stock.
-
-#### POST /api/inventory/decrease
-
-Decrease stock.
-
-#### POST /api/inventory/reserve
-
-Reserve stock for an order.
-
-#### POST /api/inventory/release
-
-Release reserved stock.
-
-#### PATCH /api/inventory/reduce-stock
-
-Reduce stock after successful payment.
-
-### Cart APIs
-
-#### POST /api/cart/add
-
-Add an item to the cart.
-
-Request body:
-
-```json
-{
-  "userId": "user-123",
-  "productId": "prod-001",
-  "quantity": 1
-}
-```
-
-#### PUT /api/cart/update
-
-Update quantity of an item in the cart.
-
-#### DELETE /api/cart/remove/:userId/:productId
-
-Remove one item from the cart.
-
-#### DELETE /api/cart/clear/:userId
-
-Clear the user's cart.
-
-#### GET /api/cart/:userId
-
-Retrieve the cart for a specific user.
-
-### Order APIs
-
-#### POST /api/orders
-
-Create a new order from the cart.
-
-Request body:
-
-```json
-{
-  "userId": "user-123",
-  "shippingAddress": "123 Tech Street",
-  "paymentMethod": "COD"
-}
-```
-
-#### GET /api/orders
-
-Get all orders.
-
-#### GET /api/orders/user/:userId
-
-Get orders for a specific user.
-
-#### GET /api/orders/:id
-
-Get a single order by ID.
-
-#### PUT /api/orders/:id/status
-
-Update the order status.
-
-#### PUT /api/orders/:id/cancel
-
-Cancel an existing order.
-
-### Payment APIs
-
-#### POST /api/payment/create
-
-Create a payment for an order.
-
-Request body:
-
-```json
-{
-  "orderId": "order-001",
-  "userId": "user-123",
-  "paymentMethod": "COD"
-}
-```
-
-#### GET /api/payment/order/:orderId
-
-Get payment by order ID.
-
-#### GET /api/payment/:id
-
-Get payment by payment ID.
-
-#### PUT /api/payment/:id/status
-
-Update payment status.
+## 🔒 Security & Code Quality
+
+* **Cognito Authentication**: User tokens signed by `natish-user-pool` are decoded and verified using `aws-jwt-verify` in `authMiddleware.js`.
+* **CORS Security**: Dynamic origin callback function (`ALLOWED_ORIGINS`) enforcing secure requests from localhost and CloudFront.
+* **Modern Standard Imports**: Standardized usage of `node:crypto` (`crypto.randomInt`), `node:http`, and `node:https`.
+* **SonarCloud Compliance**: Source exclusions (`sonar-project.properties`) configured for zero false positives and green **PASSED** Quality Gate rating.
 
 ---
 
-## 9. Installation
+## 📊 Observability & CloudWatch Dashboard
 
-### Clone the Repository
+* **Distributed Tracing**: Standardized AWS X-Ray open/close segment tracing in Express `app.js` and AWS SDK v3 client instrumentation (`AWSXRay.captureAWSv3Client`).
+* **CloudWatch Dashboard**: Unified observability dashboard **`natish-microservices-dashboard`** monitoring metrics for all 12 Lambda functions:
+  * `Lambda Invocations (5-Min Sum)`
+  * `Lambda Errors (5-Min Sum)`
+  * `Average Latency (5-Min Avg Milliseconds)`
+  * `Lambda Throttles (5-Min Sum)`
 
+---
+
+## 💻 Local Testing & Deployment
+
+### Running Tests Locally
 ```bash
-git clone <your-repository-url>
-cd e-com_backend
+# Navigate to a microservice
+cd product-service
+
+# Run unit tests with 50%+ coverage threshold
+npm run test:coverage
 ```
 
-### Install Dependencies
-
-Run the following inside each service folder:
-
+### Deploying Microservices via Serverless Framework
 ```bash
-cd product-service && npm install
-cd ../inventory-service && npm install
-cd ../cart-service && npm install
-cd ../order-service && npm install
-cd ../payment-service && npm install
+# Deploy an individual microservice to AWS Lambda
+npx serverless deploy --stage prod
 ```
-
-### Configure Environment Variables
-
-Create a `.env` file in each service folder.
-
-### Run the Services
-
-```bash
-cd product-service && npm run dev
-cd ../inventory-service && npm run dev
-cd ../cart-service && npm run dev
-cd ../order-service && npm run dev
-cd ../payment-service && npm run dev
-```
-
----
-
-## 10. Environment Variables
-
-Example `.env` for each service:
-
-```env
-# Common AWS config
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-
-# Product Service
-DYNAMODB_TABLE_NAME=Products
-PORT=5001
-
-# Inventory Service
-DYNAMODB_TABLE_NAME=Inventories
-DYNAMODB_MOVEMENTS_TABLE_NAME=InventoryMovements
-PRODUCT_SERVICE_URL=http://localhost:5001
-PORT=5005
-
-# Cart Service
-DYNAMODB_TABLE_NAME=Carts
-PRODUCTS_TABLE_NAME=Products
-PORT=5002
-
-# Order Service
-DYNAMODB_TABLE_NAME=Orders
-CART_TABLE_NAME=Carts
-PRODUCTS_TABLE_NAME=Products
-INVENTORY_SERVICE_URL=http://localhost:5005
-PORT=5003
-
-# Payment Service
-DYNAMODB_TABLE_NAME=Payments
-ORDERS_TABLE_NAME=Orders
-INVENTORY_SERVICE_URL=http://localhost:5005
-PORT=5004
-```
-
-### Variable Explanation
-
-- AWS_REGION: AWS region for DynamoDB
-- AWS_ACCESS_KEY_ID: AWS access key
-- AWS_SECRET_ACCESS_KEY: AWS secret key
-- DYNAMODB_TABLE_NAME: Main table for each service
-- DYNAMODB_MOVEMENTS_TABLE_NAME: Table for inventory movements
-- PRODUCT_SERVICE_URL: Base URL for the Product Service
-- INVENTORY_SERVICE_URL: Base URL for the Inventory Service
-- PRODUCTS_TABLE_NAME: Product table name used by dependent services
-- CART_TABLE_NAME: Cart table name used by Order Service
-- ORDERS_TABLE_NAME: Orders table used by Payment Service
-
----
-
-## 11. Features
-
-✔ Product Management
-
-✔ Inventory Management
-
-✔ Cart Management
-
-✔ Order Management
-
-✔ Payment Management
-
-✔ RESTful Microservices
-
-✔ AWS DynamoDB Integration
-
-✔ Inter-Service Communication with Axios
-
-✔ Clean Architecture and MVC-style structure
-
-✔ Service Layer Pattern
-
-✔ Validation and Error Handling
-
-✔ Scalable architecture for future growth
-
----
-
-## 12. Future Enhancements
-
-This project is a strong foundation for a much larger e-commerce platform. Planned enhancements include:
-
-- JWT Authentication
-- User Service
-- Admin Service
-- Notification Service
-- Warehouse Service
-- Review Service
-- Wishlist Service
-- Coupon Service
-- API Gateway
-- Dockerization
-- Kubernetes deployment
-- CI/CD pipeline
-- AWS ECS / EKS
-- Redis caching
-- Elasticsearch search
-
----
-
-## 13. Screenshots Section
-
-### Architecture Diagram
-
-- Placeholder: Add architecture image here.
-
-### API Testing
-
-- Placeholder: Add Postman or Insomnia screenshot here.
-
-### AWS DynamoDB
-
-- Placeholder: Add DynamoDB table screenshots here.
-
-### Postman Collection
-
-- Placeholder: Add Postman collection export here.
-
-### Project Structure
-
-- Placeholder: Add folder tree screenshot here.
-
----
-
-## 14. License
-
-This project is licensed under the MIT License.
-
----
-
-## 15. Author
-
-Name: Your Name
-
-GitHub: https://github.com/your-username
-
-LinkedIn: https://linkedin.com/in/your-profile
-
-Portfolio: https://your-portfolio.com
-
----
-
-## Contributing
-
-Contributions are welcome. Feel free to open issues, suggest improvements, or submit pull requests.
-
-## Contact
-
-If you want to discuss this project or collaborate, feel free to reach out through GitHub or LinkedIn.
