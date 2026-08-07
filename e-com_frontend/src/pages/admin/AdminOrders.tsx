@@ -1457,7 +1457,7 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack, onOr
             {/* Horizontal connected progress bar line (visible only on md screens and up) */}
             <div className="absolute left-[35px] right-[35px] top-[13px] h-[2px] bg-slate-100 z-0 hidden md:block" />
             
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-6 md:gap-4 relative z-10">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-6 md:gap-4 relative z-10">
               {STATUS_WORKFLOW.map((st, idx) => {
                 const currentIdx  = STATUS_WORKFLOW.indexOf(currentStatus);
                 const isCompleted = currentIdx !== -1 && idx < currentIdx;

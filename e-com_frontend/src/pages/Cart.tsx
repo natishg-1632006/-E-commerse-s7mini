@@ -531,7 +531,7 @@ export const Cart: React.FC = () => {
                     </h3>
                   </div>
 
-                  <div className="grid gap-4 md:gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4 md:gap-5">
                     {accessories.map((acc) => (
                       <div
                         key={acc.id}
@@ -702,7 +702,7 @@ export const Cart: React.FC = () => {
                 </h3>
               </div>
 
-              <div className="grid gap-4 md:gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4 md:gap-5">
                 {accessories.map((acc) => (
                   <div
                     key={acc.id}
@@ -714,7 +714,7 @@ export const Cart: React.FC = () => {
                       <img
                         src={acc.image}
                         alt={acc.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
+                        className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-103"
                       />
                     </div>
 
@@ -842,7 +842,7 @@ export const Cart: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid gap-4 lg:gap-6" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-6">
                 {recommendations.map((prod) => (
                   <div
                     key={prod.id}

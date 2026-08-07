@@ -1012,7 +1012,7 @@ export const Marketplace: React.FC = () => {
       <MainLayout>
         <div className="w-full flex flex-col items-stretch space-y-12 select-none">
           {/* Horizontal Category Scroll Bar (Flipkart Style) */}
-          <div className="w-full bg-white border-b border-slate-100/70 py-1.5 select-none sticky top-16 z-40 -mt-8 mb-4 shadow-sm/5">
+          <div className="w-full bg-white border-b border-slate-100/70 py-1.5 select-none sticky top-16 z-40 mt-0 lg:-mt-8 mb-4 shadow-sm/5">
             <div className="flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-2 sm:gap-4 md:gap-0 px-4 justify-start md:justify-center w-full">
               {categoriesLoading ? (
                 Array.from({ length: 6 }).map((_, idx) => (
@@ -1359,7 +1359,7 @@ export const Marketplace: React.FC = () => {
         </div>
 
         {/* Content catalog Layout */}
-        <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8 items-start -mt-8">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8 items-start mt-8 lg:-mt-8">
           {/* Left Column Filters Sticky Sidebar */}
           <aside className="hidden lg:block lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto col-span-1 select-none">
             <Card variant="simple" className="p-6 border-slate-200 text-left bg-white rounded-[20px] shadow-[0_8px_30px_rgb(0,0,0,0.015)]">
@@ -1477,7 +1477,7 @@ export const Marketplace: React.FC = () => {
             </div>
 
             {/* Catalog Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-5">
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3.5 sm:gap-4 lg:gap-5">
               {isLoading ? (
                 Array.from({ length: itemsPerPage }).map((_, idx) => (
                   <SkeletonProductCard key={`skeleton-catalog-${idx}`} />

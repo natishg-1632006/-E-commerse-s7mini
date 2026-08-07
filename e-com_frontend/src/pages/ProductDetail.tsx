@@ -536,6 +536,21 @@ export const ProductDetail: React.FC = () => {
           <div className="lg:col-span-5 flex flex-col space-y-4">
             <div className="relative w-full aspect-square md:aspect-[4/3] rounded-3xl bg-slate-50/50 overflow-hidden border border-slate-100/70 flex items-center justify-center group">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 rounded-full bg-gradient-to-tr from-blue-500/12 to-indigo-500/6 blur-3xl group-hover:scale-110 transition-transform duration-700" />
+              
+              {/* Wishlist Button Overlay */}
+              <button
+                onClick={handleToggleWishlist}
+                className={cn(
+                  "absolute top-4 right-4 w-10 h-10 rounded-full border flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-md bg-white/90 backdrop-blur-sm z-20 border-slate-150/80",
+                  isWishlisted
+                    ? "text-red-500 fill-red-500 hover:text-red-650"
+                    : "text-slate-400 hover:text-red-500 hover:border-red-200"
+                )}
+                aria-label="Toggle Wishlist"
+              >
+                <Heart className="w-4.5 h-4.5" />
+              </button>
+
               <img
                 src={thumbnails[activeImageIdx]}
                 alt={productData.name}
@@ -622,18 +637,6 @@ export const ProductDetail: React.FC = () => {
                 disabled={productData.stock === 0 || isAdding}
               >
                 {productData.stock === 0 ? 'Out of Stock' : 'Buy Now'}
-              </button>
-
-              <button
-                onClick={handleToggleWishlist}
-                className={cn(
-                  "w-12 h-12 rounded-full border flex items-center justify-center transition-all cursor-pointer active:scale-90 shadow-sm bg-white",
-                  isWishlisted
-                    ? "border-red-200 text-red-500 fill-red-500 hover:text-red-600"
-                    : "border-slate-200 text-slate-400 hover:text-red-500 hover:border-red-200"
-                )}
-              >
-                <Heart className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -874,7 +877,7 @@ export const ProductDetail: React.FC = () => {
         </div>
       </div>        {/* Frequently Bought Together */}
         {bundleItems.length > 0 && (
-          <div className="bg-white rounded-[24px] border border-slate-200/60 p-6 md:p-8 shadow-[0_4px_30px_rgba(15,23,42,0.01)] space-y-6">
+          <div className="bg-white rounded-[24px] border border-slate-200/60 p-3 sm:p-6 md:p-8 shadow-[0_4px_30px_rgba(15,23,42,0.01)] space-y-6">
             <div className="flex items-center space-x-2 pb-3.5 border-b border-slate-100">
               <h2 className="text-base font-black text-slate-855 tracking-tight">Frequently Bought Together</h2>
               <div className="bg-blue-50 text-blue-700 border border-blue-100/50 rounded-full px-2.5 py-0.5 text-[9px] font-black tracking-wide flex items-center space-x-1">
@@ -883,7 +886,7 @@ export const ProductDetail: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid gap-4 lg:gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))' }}>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5 sm:gap-4 lg:gap-5">
               {bundleItems.map((item) => (
                 <div
                   key={item.id}
@@ -894,7 +897,7 @@ export const ProductDetail: React.FC = () => {
                     <img
                       src={item.image}
                       alt={item.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-103"
+                      className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-103"
                     />
                   </div>
                   <div className="flex flex-col flex-grow justify-between text-left mt-3">

@@ -75,11 +75,11 @@ const getAllProducts = async (query) => {
     const term = search.toLowerCase();
     products = products.filter(
       (p) =>
-        p.name.toLowerCase().includes(term) ||
+        (p.name && p.name.toLowerCase().includes(term)) ||
         (p.displayId && p.displayId.toLowerCase().includes(term)) ||
-        p.description.toLowerCase().includes(term) ||
-        p.brand.toLowerCase().includes(term) ||
-        p.category.toLowerCase().includes(term)
+        (p.description && p.description.toLowerCase().includes(term)) ||
+        (p.brand && p.brand.toLowerCase().includes(term)) ||
+        (p.category && p.category.toLowerCase().includes(term))
     );
   }
 
