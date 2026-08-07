@@ -2,6 +2,18 @@ const { QueryCommand, PutCommand, GetCommand, DeleteCommand, UpdateCommand, Scan
 const { docClient, REVIEWS_TABLE } = require('../utils/db');
 const { v4: uuidv4 } = require('uuid');
 
+const generateDisplayId = (prefix, seed) => {
+  if (!seed) return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const num = (Math.abs(hash) % 9000) + 100;
+  return `${prefix}${num}`;
+};
+
 const getProductReviews = async (productId) => {
   const result = await docClient.send(
     new QueryCommand({
@@ -13,13 +25,18 @@ const getProductReviews = async (productId) => {
       },
     })
   );
-  return result.Items || [];
+  return (result.Items || []).map(r => ({
+    ...r,
+    displayId: r.displayId || generateDisplayId('REV', r.reviewId)
+  }));
 };
 
 const createReview = async ({ productId, userId, username, rating, comment }) => {
   const reviewId = uuidv4();
+  const displayId = generateDisplayId('REV', reviewId);
   const newReview = {
     reviewId,
+    displayId,
     productId,
     userId,
     username: username || 'Anonymous User',
@@ -44,7 +61,11 @@ const getReviewById = async (reviewId) => {
       Key: { reviewId },
     })
   );
-  return result.Item;
+  if (!result.Item) return null;
+  return {
+    ...result.Item,
+    displayId: result.Item.displayId || generateDisplayId('REV', result.Item.reviewId)
+  };
 };
 
 const updateReview = async (userId, reviewId, { rating, comment }) => {
@@ -72,7 +93,11 @@ const updateReview = async (userId, reviewId, { rating, comment }) => {
       ReturnValues: 'ALL_NEW',
     })
   );
-  return result.Attributes;
+  if (!result.Attributes) return null;
+  return {
+    ...result.Attributes,
+    displayId: result.Attributes.displayId || generateDisplayId('REV', result.Attributes.reviewId)
+  };
 };
 
 const deleteReview = async (userId, reviewId, userRoles = []) => {
@@ -100,7 +125,10 @@ const getAllReviews = async () => {
       TableName: REVIEWS_TABLE,
     })
   );
-  return result.Items || [];
+  return (result.Items || []).map(r => ({
+    ...r,
+    displayId: r.displayId || generateDisplayId('REV', r.reviewId)
+  }));
 };
 
 module.exports = { getProductReviews, createReview, updateReview, deleteReview, getAllReviews };

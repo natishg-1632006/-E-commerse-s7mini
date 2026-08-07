@@ -15,6 +15,18 @@ const {
 } = require('@aws-sdk/lib-dynamodb');
 const { docClient, TABLE_NAME } = require('../utils/fileHandler');
 
+const generateDisplayId = (prefix, seed) => {
+  if (!seed) return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const num = (Math.abs(hash) % 9000) + 100;
+  return `${prefix}${num}`;
+};
+
 const getAllProducts = async (query) => {
   const { search, category, brand, minPrice, maxPrice, sort, order, page, limit } = query;
 
@@ -54,13 +66,17 @@ const getAllProducts = async (query) => {
 
   const { Items = [] } = await docClient.send(new ScanCommand(params));
 
-  let products = Items;
+  let products = Items.map(p => ({
+    ...p,
+    displayId: p.displayId || generateDisplayId('PRD', p.productId)
+  }));
 
   if (search) {
     const term = search.toLowerCase();
     products = products.filter(
       (p) =>
         p.name.toLowerCase().includes(term) ||
+        (p.displayId && p.displayId.toLowerCase().includes(term)) ||
         p.description.toLowerCase().includes(term) ||
         p.brand.toLowerCase().includes(term) ||
         p.category.toLowerCase().includes(term)
@@ -116,8 +132,13 @@ const getAllProducts = async (query) => {
 
 const getProductById = async (id) => {
   const { Item } = await docClient.send(new GetCommand({ TableName: TABLE_NAME, Key: { productId: id } }));
-  return Item || null;
+  if (!Item) return null;
+  return {
+    ...Item,
+    displayId: Item.displayId || generateDisplayId('PRD', Item.productId)
+  };
 };
+
 const createProduct = async (data) => {
   console.log("STEP 1 - Start createProduct");
 
@@ -138,8 +159,12 @@ const createProduct = async (data) => {
 
   console.log("STEP 3 - Creating product object");
 
+  const productId = uuidv4();
+  const displayId = data.displayId || generateDisplayId('PRD', productId);
+
   const product = {
-    productId: uuidv4(),
+    productId,
+    displayId,
     name: data.name,
     description: data.description,
     brand: data.brand,

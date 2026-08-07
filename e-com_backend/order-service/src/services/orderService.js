@@ -22,6 +22,18 @@ const getExpiresAt = () => {
   return new Date(Date.now() + minutes * 60 * 1000).toISOString();
 };
 
+const generateDisplayId = (prefix, seed) => {
+  if (!seed) return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const num = (Math.abs(hash) % 9000) + 100;
+  return `${prefix}${num}`;
+};
+
 // ─── Create Order ─────────────────────────────────────────────────────────────
 
 const createOrder = async (userId, email, shippingAddress, paymentMethod, token, couponCode) => {
@@ -246,11 +258,12 @@ const createOrder = async (userId, email, shippingAddress, paymentMethod, token,
   }
 
   const orderId = uuidv4();
+  const displayId = generateDisplayId('ORD', orderId);
 
   console.time("Reserve Inventory");
 
   console.log(
-    `[Order] Reserving inventory | orderId: ${orderId} | userId: ${userId} | items: ${enrichedItems.length}`
+    `[Order] Reserving inventory | orderId: ${orderId} | displayId: ${displayId} | userId: ${userId} | items: ${enrichedItems.length}`
   );
 
   try {
@@ -283,6 +296,7 @@ const createOrder = async (userId, email, shippingAddress, paymentMethod, token,
 
   const order = {
     orderid: orderId,
+    displayId,
     userId,
     email,
     items: enrichedItems,
@@ -364,20 +378,24 @@ const createOrder = async (userId, email, shippingAddress, paymentMethod, token,
 const getAllOrders = async (params = {}) => {
   const { Items = [] } = await docClient.send(new ScanCommand({ TableName: ORDERS_TABLE }));
 
-  let filtered = [...Items];
+  let filtered = Items.map(o => ({
+    ...o,
+    displayId: o.displayId || generateDisplayId('ORD', o.orderid)
+  }));
 
-  // 1. Search filter: search matches orderid, email, shippingAddress.fullName, shippingAddress.phone, customerInfo.fullName, customerInfo.email
+  // 1. Search filter: search matches orderid, displayId, email, shippingAddress.fullName, shippingAddress.phone, customerInfo.fullName, customerInfo.email
   if (params.search) {
     const searchVal = String(params.search).toLowerCase().trim();
     filtered = filtered.filter(o => {
       const orderIdMatch = o.orderid && String(o.orderid).toLowerCase().includes(searchVal);
+      const displayIdMatch = o.displayId && String(o.displayId).toLowerCase().includes(searchVal);
       const emailMatch = o.email && String(o.email).toLowerCase().includes(searchVal);
       const customerEmailMatch = o.customerInfo && o.customerInfo.email && String(o.customerInfo.email).toLowerCase().includes(searchVal);
       const fullNameMatch = o.shippingAddress && o.shippingAddress.fullName && String(o.shippingAddress.fullName).toLowerCase().includes(searchVal);
       const phoneMatch = o.shippingAddress && o.shippingAddress.phone && String(o.shippingAddress.phone).includes(searchVal);
       const customerPhoneMatch = o.customerInfo && o.customerInfo.phone && String(o.customerInfo.phone).includes(searchVal);
 
-      return orderIdMatch || emailMatch || customerEmailMatch || fullNameMatch || phoneMatch || customerPhoneMatch;
+      return orderIdMatch || displayIdMatch || emailMatch || customerEmailMatch || fullNameMatch || phoneMatch || customerPhoneMatch;
     });
   }
 
@@ -505,7 +523,11 @@ const getAllOrders = async (params = {}) => {
 
 const getOrderById = async (orderid) => {
   const { Item } = await docClient.send(new GetCommand({ TableName: ORDERS_TABLE, Key: { orderid } }));
-  return Item || null;
+  if (!Item) return null;
+  return {
+    ...Item,
+    displayId: Item.displayId || generateDisplayId('ORD', Item.orderid)
+  };
 };
 
 const getOrdersByUser = async (userId) => {
@@ -519,7 +541,10 @@ const getOrdersByUser = async (userId) => {
       },
     })
   );
-  return Items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return Items.map(o => ({
+    ...o,
+    displayId: o.displayId || generateDisplayId('ORD', o.orderid)
+  })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 };
 
 const hasProcessedEvent = (order, eventKey) => {

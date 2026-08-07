@@ -38,6 +38,18 @@ const recordMovement = async (productId, type, quantity, reason, referenceId = '
   return movement;
 };
 
+const generateDisplayId = (prefix, seed) => {
+  if (!seed) return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const num = (Math.abs(hash) % 9000) + 100;
+  return `${prefix}${num}`;
+};
+
 const getInventoryByProductId = async (productId) => {
 
   const { Item } = await docClient.send(
@@ -49,7 +61,11 @@ const getInventoryByProductId = async (productId) => {
     })
   );
 
-  return Item || null;
+  if (!Item) return null;
+  return {
+    ...Item,
+    displayId: Item.displayId || generateDisplayId('INV', Item.productId)
+  };
 };
 
 const getInventoryBatch = async (productIds) => {
@@ -68,7 +84,10 @@ const getInventoryBatch = async (productIds) => {
     })
   );
 
-  return Responses?.[TABLE_NAME] || [];
+  return (Responses?.[TABLE_NAME] || []).map(inv => ({
+    ...inv,
+    displayId: inv.displayId || generateDisplayId('INV', inv.productId)
+  }));
 
 };
 
@@ -172,9 +191,11 @@ const createInventory = async (data) => {
   const reservedStock = 0;
   const availableStock = currentStock - reservedStock;
   const lowStockThreshold = parseInt(data.lowStockThreshold ?? 10);
+  const displayId = data.displayId || generateDisplayId('INV', data.productId);
 
   const inventory = {
     productId: data.productId,
+    displayId,
     currentStock,
     reservedStock,
     availableStock,
@@ -221,6 +242,7 @@ const processProductCreatedEvent = async ({ message }) => {
 
   const inventory = {
     productId: message.productId,
+    displayId: generateDisplayId('INV', message.productId),
     currentStock: 0,
     reservedStock: 0,
     availableStock: 0,
@@ -247,7 +269,10 @@ const processProductCreatedEvent = async ({ message }) => {
 
 const getAllInventory = async () => {
   const { Items = [] } = await docClient.send(new ScanCommand({ TableName: TABLE_NAME }));
-  return Items;
+  return Items.map(inv => ({
+    ...inv,
+    displayId: inv.displayId || generateDisplayId('INV', inv.productId)
+  }));
 };
 
 const updateInventory = async (productId, data) => {

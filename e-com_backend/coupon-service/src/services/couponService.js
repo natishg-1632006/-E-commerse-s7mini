@@ -10,6 +10,18 @@ const { docClient } = require("../config/dynamodb");
 
 const TABLE_NAME = process.env.DYNAMODB_TABLE_NAME;
 
+const generateDisplayId = (prefix, seed) => {
+  if (!seed) return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const num = (Math.abs(hash) % 9000) + 100;
+  return `${prefix}${num}`;
+};
+
 /**
  * Create Coupon
  */
@@ -31,9 +43,11 @@ const createCoupon = async (couponData) => {
     }
 
     const now = new Date().toISOString();
+    const displayId = couponData.displayId || generateDisplayId('CPN', couponCode);
 
     const coupon = {
         couponCode,
+        displayId,
 
         couponName: couponData.couponName,
 
@@ -86,7 +100,10 @@ const getAllCoupons = async () => {
         })
     );
 
-    const coupons = result.Items || [];
+    const coupons = (result.Items || []).map(c => ({
+        ...c,
+        displayId: c.displayId || generateDisplayId('CPN', c.couponCode)
+    }));
 
     coupons.sort(
         (a, b) =>
@@ -114,7 +131,10 @@ const getCouponByCode = async (couponCode) => {
         throw new Error("Coupon not found");
     }
 
-    return result.Item;
+    return {
+        ...result.Item,
+        displayId: result.Item.displayId || generateDisplayId('CPN', result.Item.couponCode)
+    };
 };
 
 /**

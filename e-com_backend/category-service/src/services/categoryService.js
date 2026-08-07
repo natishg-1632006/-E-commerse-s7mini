@@ -17,10 +17,25 @@ const {
     deleteImageFromS3
 } = require("../utils/s3Helper");
 
+const generateDisplayId = (prefix, seed) => {
+  if (!seed) return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const num = (Math.abs(hash) % 9000) + 100;
+  return `${prefix}${num}`;
+};
+
 const createCategory = async (data) => {
+    const categoryId = uuidv4();
+    const displayId = data.displayId || generateDisplayId('CAT', categoryId);
 
     const category = {
-        categoryId: uuidv4(),
+        categoryId,
+        displayId,
         name: data.name,
         description: data.description || '',
         image: data.image || {},
@@ -58,7 +73,10 @@ const getAllCategories = async (query) => {
         })
     );
 
-    let categories = Items;
+    let categories = Items.map(c => ({
+        ...c,
+        displayId: c.displayId || generateDisplayId('CAT', c.categoryId)
+    }));
 
     // Search
     if (search) {
@@ -67,6 +85,7 @@ const getAllCategories = async (query) => {
         categories = categories.filter(
             (c) =>
                 c.name.toLowerCase().includes(term) ||
+                (c.displayId && c.displayId.toLowerCase().includes(term)) ||
                 c.description.toLowerCase().includes(term)
         );
     }
@@ -138,7 +157,11 @@ const getCategoryById = async (id) => {
         })
     );
 
-    return Item || null;
+    if (!Item) return null;
+    return {
+        ...Item,
+        displayId: Item.displayId || generateDisplayId('CAT', Item.categoryId)
+    };
 };
 
 const updateCategory = async (id, data) => {

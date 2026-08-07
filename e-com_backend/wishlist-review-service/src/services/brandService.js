@@ -2,13 +2,28 @@ const { PutCommand, GetCommand, DeleteCommand, UpdateCommand, ScanCommand } = re
 const { docClient, BRANDS_TABLE } = require('../utils/db');
 const { v4: uuidv4 } = require('uuid');
 
+const generateDisplayId = (prefix, seed) => {
+  if (!seed) return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const num = (Math.abs(hash) % 9000) + 100;
+  return `${prefix}${num}`;
+};
+
 const getAllBrands = async () => {
   const result = await docClient.send(
     new ScanCommand({
       TableName: BRANDS_TABLE,
     })
   );
-  return result.Items || [];
+  return (result.Items || []).map(b => ({
+    ...b,
+    displayId: b.displayId || generateDisplayId('BRD', b.brandId)
+  }));
 };
 
 const getBrandById = async (brandId) => {
@@ -18,7 +33,11 @@ const getBrandById = async (brandId) => {
       Key: { brandId },
     })
   );
-  return result.Item;
+  if (!result.Item) return null;
+  return {
+    ...result.Item,
+    displayId: result.Item.displayId || generateDisplayId('BRD', result.Item.brandId)
+  };
 };
 
 const createBrand = async ({ name, logoUrl, description }) => {
@@ -27,8 +46,10 @@ const createBrand = async ({ name, logoUrl, description }) => {
   }
 
   const brandId = uuidv4();
+  const displayId = generateDisplayId('BRD', brandId);
   const newBrand = {
     brandId,
+    displayId,
     name: name.trim(),
     logoUrl: logoUrl || '',
     description: description || '',

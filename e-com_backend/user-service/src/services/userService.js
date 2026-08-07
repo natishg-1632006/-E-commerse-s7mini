@@ -1,8 +1,21 @@
 const { PutCommand, ScanCommand, GetCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
 const { docClient, TABLE_NAME } = require('../utils/fileHandler');
 
+const generateDisplayId = (prefix, seed) => {
+  if (!seed) return `${prefix}${Math.floor(100 + Math.random() * 900)}`;
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash << 5) - hash + str.charCodeAt(i);
+    hash |= 0;
+  }
+  const num = (Math.abs(hash) % 9000) + 100;
+  return `${prefix}${num}`;
+};
+
 const buildEmptyProfile = (userId, email) => ({
   userId,
+  displayId: generateDisplayId('USR', userId),
   email,
   fullName: null,
   phone: null,
@@ -24,7 +37,11 @@ const getUserById = async (userId) => {
 
   console.timeEnd("Dynamo");
 
-  return Item || null;
+  if (!Item) return null;
+  return {
+    ...Item,
+    displayId: Item.displayId || generateDisplayId('USR', Item.userId)
+  };
 };
 
 const getOrCreateProfile = async (userId, email) => {
@@ -92,12 +109,19 @@ const updateProfile = async (userId, data) => {
     })
   );
 
-  return Attributes;
+  if (!Attributes) return null;
+  return {
+    ...Attributes,
+    displayId: Attributes.displayId || generateDisplayId('USR', Attributes.userId)
+  };
 };
 
 const getAllUsers = async () => {
   const { Items = [] } = await docClient.send(new ScanCommand({ TableName: TABLE_NAME }));
-  return Items;
+  return Items.map(u => ({
+    ...u,
+    displayId: u.displayId || generateDisplayId('USR', u.userId)
+  }));
 };
 
 module.exports = {
