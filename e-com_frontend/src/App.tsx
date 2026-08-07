@@ -46,7 +46,7 @@ function ScrollToTop() {
       window.scrollTo({
         top: 0,
         left: 0,
-        behavior: 'auto'
+        behavior: 'smooth'
       });
       document.body.scrollTop = 0;
       if (document.documentElement) {
@@ -62,7 +62,7 @@ function ScrollToTop() {
         window.scrollTo({
           top: 0,
           left: 0,
-          behavior: 'auto'
+          behavior: 'smooth'
         });
         document.body.scrollTop = 0;
         if (document.documentElement) {

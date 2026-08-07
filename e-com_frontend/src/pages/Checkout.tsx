@@ -40,7 +40,6 @@ export const Checkout: React.FC = () => {
   // Calculations at the top to be in scope for hooks and state
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shipping = 0; // Standard shipping is free
-  const tax = subtotal * 0.018; // 1.8% tax rate
 
   // Stepper state: 2 = Checkout (Shipping/Delivery), 3 = Payment, 4 = Confirmation
   const [activeStep, setActiveStep] = useState(2);
@@ -57,7 +56,7 @@ export const Checkout: React.FC = () => {
 
   const displayItems = orderItems.length > 0 ? orderItems : items;
   const displaySubtotal = orderSubtotal !== null ? orderSubtotal : subtotal;
-  const displayTax = orderSubtotal !== null ? orderSubtotal * 0.018 : tax;
+  const displayTax = 0; // Tax removed
 
   // Shipping form fields
   const [fullName, setFullName] = useState('');
@@ -228,7 +227,7 @@ export const Checkout: React.FC = () => {
 
   // Revalidate coupon on subtotal changes (triggered by cart quantity changes or items removal)
   useEffect(() => {
-    if (!appliedCoupon) return;
+    if (!appliedCoupon || activeStep >= 3 || orderId || queryOrderId) return;
 
     const revalidate = async () => {
       try {
@@ -248,6 +247,29 @@ export const Checkout: React.FC = () => {
 
     revalidate();
   }, [subtotal, cartProducts]);
+
+  // Scroll to top smoothly when step changes or loading finishes
+  useEffect(() => {
+    if (isLoading) return;
+
+    const timer = setTimeout(() => {
+      try {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'smooth'
+        });
+        document.body.scrollTop = 0;
+        if (document.documentElement) {
+          document.documentElement.scrollTop = 0;
+        }
+      } catch (e) {
+        window.scrollTo(0, 0);
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, [activeStep, isLoading]);
 
   const handleApplyCoupon = async () => {
     if (!couponCodeInput.trim() || couponApplied || couponLoading) return;
@@ -1115,10 +1137,7 @@ export const Checkout: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex justify-between">
-                    <span>Estimated Tax</span>
-                    <Price value={displayTax} className="text-slate-800 font-black" />
-                  </div>
+
 
                   <div className="flex justify-between text-slate-850 pt-2.5 border-t border-slate-100 font-black">
                     <span>Total</span>

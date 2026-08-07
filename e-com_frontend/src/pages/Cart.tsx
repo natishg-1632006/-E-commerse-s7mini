@@ -182,11 +182,8 @@ export const Cart: React.FC = () => {
 
   // Pricing calculations (INR)
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shippingThreshold = 50000; // Free shipping threshold in Rupees
-  const isFreeShipping = subtotal >= shippingThreshold;
-  const shipping = isFreeShipping ? 0 : subtotal > 0 ? 1500 : 0;
-  const tax = subtotal * 0.018; // 1.8% tax matching the screenshot subtotal/tax ratio!
-  const total = Math.max(0, subtotal - discountAmount + shipping + tax);
+  const shipping = 0;
+  const total = Math.max(0, subtotal - discountAmount + shipping);
 
   // Accessories list (Frequently Bought Together) dynamically resolved from catalog database
   const accessories = useMemo(() => {
@@ -655,10 +652,7 @@ export const Cart: React.FC = () => {
                       </span>
                     </div>
 
-                    <div className="flex justify-between">
-                      <span>Tax (Estimated)</span>
-                      <Price value={tax} className="text-slate-800" />
-                    </div>
+
 
                     <div className="flex justify-between text-sm font-black text-slate-900 pt-3.5 border-t border-slate-100">
                       <span>Total</span>

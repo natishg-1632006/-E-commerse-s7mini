@@ -1583,7 +1583,10 @@ export const Marketplace: React.FC = () => {
                 <Pagination
                   currentPage={currentPage}
                   totalPages={totalPages}
-                  onPageChange={setCurrentPage}
+                  onPageChange={(page) => {
+                    setCurrentPage(page);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
                 />
               )}
               <div className="flex items-center space-x-2 text-[11px] font-bold text-slate-450">
@@ -1594,6 +1597,7 @@ export const Marketplace: React.FC = () => {
                     onClick={() => {
                       setItemsPerPage(size);
                       setCurrentPage(1);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
                     }}
                     className={cn(
                       "px-2.5 py-1 rounded-[8px] transition-colors cursor-pointer",

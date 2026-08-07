@@ -65,8 +65,13 @@ class ReviewService {
   }
 
   async getAllReviews(): Promise<Review[]> {
-    const response = await reviewApi.get('/api/v1/reviews');
-    return response.data.data || [];
+    try {
+      const response = await reviewApi.get('/api/v1/reviews');
+      return response.data.data || [];
+    } catch (error) {
+      // Suppress 403 Forbidden logs silently for standard users
+      return [];
+    }
   }
 }
 

@@ -12,7 +12,6 @@ import {
   Sparkles,
   Heart,
   ShoppingCart,
-  Calendar,
   Check,
   MessageSquare,
   ThumbsUp,
@@ -396,7 +395,6 @@ export const ProductDetail: React.FC = () => {
 
   const currentPrice = productData?.price || 0;
   const currentListPrice = productData?.price ? productData.price * 1.15 : null; // Simulated list price
-  const emiCost = Math.round(currentPrice / 24);
 
   // Accessories bundle (Frequently bought together) dynamically resolved from catalog database
   const bundleItems = useMemo(() => {
@@ -604,10 +602,6 @@ export const ProductDetail: React.FC = () => {
                   {currentListPrice && (
                     <Price value={currentListPrice} className="text-xs text-slate-400 line-through font-bold" />
                   )}
-                </div>
-                <div className="flex items-center space-x-2 text-[10px] font-black text-slate-450 tracking-wide uppercase">
-                  <Calendar className="w-3.5 h-3.5 text-blue-600" />
-                  <span>As low as <Price value={emiCost} className="text-[10px] text-slate-700" />/mo with EMI. <span className="text-blue-600 cursor-pointer hover:underline">Learn More</span></span>
                 </div>
               </div>
             </div>
