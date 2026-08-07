@@ -63,6 +63,96 @@ const CouponStatusBadge: React.FC<{ isActive: boolean; expiryDate: string }> = (
   );
 };
 
+// --- Coupon Stat Card ---
+interface KpiCardProps {
+  label: string;
+  subLabel: string;
+  value: string | number;
+  icon: React.ReactNode;
+  iconBg: string;
+}
+
+const KpiCard: React.FC<KpiCardProps> = ({ label, subLabel, value, icon, iconBg }) => {
+  return (
+    <div
+      className="bg-white border border-slate-100 rounded-[12px] p-3.5 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-205 flex flex-col justify-between h-[105px] w-full cursor-default select-none text-left"
+    >
+      <div className="flex items-start justify-between gap-1">
+        <span className="text-[10px] font-black uppercase tracking-[0.4px] text-slate-400 whitespace-nowrap block max-w-[85%] truncate">
+          {label}
+        </span>
+        <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg} transition-all duration-300`}>
+          <span className="scale-90">{icon}</span>
+        </div>
+      </div>
+      <div className="flex flex-col justify-end flex-grow mt-1">
+        <div className="font-extrabold text-slate-900 leading-none text-[22px] transition-all duration-300 whitespace-nowrap">
+          {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
+        </div>
+        <div className="text-[11px] text-slate-400 font-bold mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis uppercase">
+          {subLabel}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- Generic Filter Dropdown ---
+interface FilterDropdownProps {
+  label: string;
+  selected: string;
+  options: { value: string; label: string }[];
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  onSelect: (value: string) => void;
+  icon?: React.ReactNode;
+}
+
+const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, selected, options, isOpen, setIsOpen, onSelect, icon }) => {
+  const activeLabel = options.find(o => o.value === selected)?.label || '';
+  return (
+    <div className="relative w-full text-left">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`h-11 w-full pl-3.5 pr-8 rounded-xl border text-slate-700 text-[11px] font-bold transition-all flex items-center justify-between shadow-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 outline-none cursor-pointer ${
+          isOpen
+            ? 'bg-slate-50/80 border-blue-600 ring-4 ring-blue-600/10'
+            : 'bg-white hover:bg-slate-50/60 border-slate-205 hover:border-slate-350 shadow-sm shadow-slate-105/40'
+        }`}
+      >
+        <div className="flex items-center space-x-2 truncate">
+          {icon && <span className="text-slate-450 w-3.5 h-3.5 flex items-center justify-center">{icon}</span>}
+          <span className="truncate">{label}: {activeLabel}</span>
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute left-0 mt-2 z-30 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 w-full min-w-[170px] flex flex-col animate-fadeIn"
+          onMouseLeave={() => setIsOpen(false)}
+        >
+          {options.map(option => (
+            <button
+              key={option.value}
+              onClick={() => {
+                onSelect(option.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3.5 py-2.5 text-[11.5px] font-bold transition-colors hover:bg-slate-50 ${
+                selected === option.value ? 'text-blue-600 bg-blue-50/10' : 'text-slate-655'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+
 interface AdminCouponsProps {
   mode?: 'list' | 'create' | 'edit';
 }
@@ -74,6 +164,29 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({ mode = 'list' }) => 
   // List states
   const [couponsList, setCouponsList] = useState<Coupon[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isScopeOpen, setIsScopeOpen] = useState(false);
+  const [isDiscountTypeOpen, setIsDiscountTypeOpen] = useState(false);
+
+  const statusOptions = [
+    { value: 'ALL', label: 'All Statuses' },
+    { value: 'ACTIVE', label: 'Active Only' },
+    { value: 'INACTIVE', label: 'Inactive Only' },
+    { value: 'EXPIRED', label: 'Expired Only' },
+  ];
+
+  const scopeOptions = [
+    { value: 'ALL_SCOPES', label: 'All Scopes' },
+    { value: 'ALL', label: 'Storewide' },
+    { value: 'PRODUCT', label: 'Product Specific' },
+    { value: 'CATEGORY', label: 'Category Specific' },
+  ];
+
+  const discountTypeOptions = [
+    { value: 'ALL', label: 'All Types' },
+    { value: 'PERCENTAGE', label: 'Percentage' },
+    { value: 'FIXED', label: 'Fixed Amount' },
+  ];
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'INACTIVE' | 'EXPIRED'>('ALL');
   const [scopeFilter, setScopeFilter] = useState<'ALL_SCOPES' | 'ALL' | 'PRODUCT' | 'CATEGORY'>('ALL_SCOPES');
   const [discountTypeFilter, setDiscountTypeFilter] = useState<'ALL' | 'PERCENTAGE' | 'FIXED'>('ALL');
@@ -129,6 +242,14 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({ mode = 'list' }) => 
       setIsListingLoading(false);
     }
   };
+
+  const stats = React.useMemo(() => {
+    const total = couponsList.length;
+    const active = couponsList.filter(c => c.isActive && !isExpired(c.expiryDate)).length;
+    const expired = couponsList.filter(c => isExpired(c.expiryDate)).length;
+    const inactive = couponsList.filter(c => !c.isActive && !isExpired(c.expiryDate)).length;
+    return { total, active, expired, inactive };
+  }, [couponsList]);
 
   useEffect(() => {
     if (mode === 'list') {
@@ -369,6 +490,40 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({ mode = 'list' }) => 
           )}
         </div>
 
+        {/* KPI CARDS GRID */}
+        {mode === 'list' && (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <KpiCard
+              label="Total Coupons"
+              subLabel="All Campaign Codes"
+              value={stats.total}
+              icon={<Ticket className="w-4 h-4" />}
+              iconBg="bg-blue-50 text-blue-600 border border-blue-100/50"
+            />
+            <KpiCard
+              label="Active Coupons"
+              subLabel="Live & Usable"
+              value={stats.active}
+              icon={<CheckCircle className="w-4 h-4" />}
+              iconBg="bg-emerald-50 text-emerald-600 border border-emerald-100/50"
+            />
+            <KpiCard
+              label="Expired Coupons"
+              subLabel="Past Validity Date"
+              value={stats.expired}
+              icon={<Calendar className="w-4 h-4" />}
+              iconBg="bg-red-50 text-red-500 border border-red-100/50"
+            />
+            <KpiCard
+              label="Inactive Coupons"
+              subLabel="Paused Campaigns"
+              value={stats.inactive}
+              icon={<Clock className="w-4 h-4" />}
+              iconBg="bg-amber-50 text-amber-600 border border-amber-100/50"
+            />
+          </div>
+        )}
+
         {/* LIST VIEW PANEL */}
         {mode === 'list' && (
           <div className="bg-white rounded-2xl border border-slate-200/50 shadow-sm overflow-hidden flex flex-col items-stretch">
@@ -390,51 +545,37 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({ mode = 'list' }) => 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 flex-shrink-0 lg:max-w-xl w-full">
                 
                 {/* Status Filter */}
-                <div className="relative flex items-center">
-                  <Filter className="absolute left-3.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => { setStatusFilter(e.target.value as any); setCurrentPage(1); }}
-                    className="w-full h-11 pl-9.5 pr-8 border border-slate-205 rounded-xl text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="ALL">All Statuses</option>
-                    <option value="ACTIVE">Active Only</option>
-                    <option value="INACTIVE">Inactive Only</option>
-                    <option value="EXPIRED">Expired Only</option>
-                  </select>
-                  <ChevronDown className="absolute right-3.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                </div>
+                <FilterDropdown
+                  label="Status"
+                  selected={statusFilter}
+                  options={statusOptions}
+                  isOpen={isStatusOpen}
+                  setIsOpen={setIsStatusOpen}
+                  onSelect={(val) => { setStatusFilter(val as any); setCurrentPage(1); }}
+                  icon={<Filter className="w-3.5 h-3.5" />}
+                />
 
                 {/* Scope Filter */}
-                <div className="relative flex items-center">
-                  <Layers className="absolute left-3.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                  <select
-                    value={scopeFilter}
-                    onChange={(e) => { setScopeFilter(e.target.value as any); setCurrentPage(1); }}
-                    className="w-full h-11 pl-9.5 pr-8 border border-slate-205 rounded-xl text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="ALL_SCOPES">All Scopes</option>
-                    <option value="ALL">ALL (Storewide)</option>
-                    <option value="PRODUCT">PRODUCT Scoped</option>
-                    <option value="CATEGORY">CATEGORY Scoped</option>
-                  </select>
-                  <ChevronDown className="absolute right-3.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                </div>
+                <FilterDropdown
+                  label="Scope"
+                  selected={scopeFilter}
+                  options={scopeOptions}
+                  isOpen={isScopeOpen}
+                  setIsOpen={setIsScopeOpen}
+                  onSelect={(val) => { setScopeFilter(val as any); setCurrentPage(1); }}
+                  icon={<Layers className="w-3.5 h-3.5" />}
+                />
 
                 {/* Discount Type Filter */}
-                <div className="relative flex items-center">
-                  <Ticket className="absolute left-3.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                  <select
-                    value={discountTypeFilter}
-                    onChange={(e) => { setDiscountTypeFilter(e.target.value as any); setCurrentPage(1); }}
-                    className="w-full h-11 pl-9.5 pr-8 border border-slate-205 rounded-xl text-[11px] font-bold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="ALL">All Types</option>
-                    <option value="PERCENTAGE">Percentage (%)</option>
-                    <option value="FIXED">Fixed Amount (₹)</option>
-                  </select>
-                  <ChevronDown className="absolute right-3.5 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                </div>
+                <FilterDropdown
+                  label="Type"
+                  selected={discountTypeFilter}
+                  options={discountTypeOptions}
+                  isOpen={isDiscountTypeOpen}
+                  setIsOpen={setIsDiscountTypeOpen}
+                  onSelect={(val) => { setDiscountTypeFilter(val as any); setCurrentPage(1); }}
+                  icon={<Ticket className="w-3.5 h-3.5" />}
+                />
 
               </div>
 

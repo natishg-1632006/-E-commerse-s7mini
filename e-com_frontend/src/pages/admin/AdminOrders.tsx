@@ -151,7 +151,6 @@ const OrderPanelFilterDropdown: React.FC<{
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STATUS_WORKFLOW = [
-  'Pending Payment',
   'Processing',
   'Packed',
   'Shipped',
@@ -160,12 +159,10 @@ const STATUS_WORKFLOW = [
   'Completed',
 ];
 
-const TERMINAL_STATUSES = ['Delivered', 'Completed', 'Cancelled', 'Payment Failed'];
+const TERMINAL_STATUSES = ['Delivered', 'Completed', 'Cancelled'];
 
 const ORDER_STATUSES = [
   'All',
-  'Pending Payment',
-  'Payment Failed',
   'Processing',
   'Packed',
   'Shipped',
@@ -883,7 +880,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ onSelectOrder }) => {
             ) : (
               <div className="p-1.5 sm:p-2 space-y-0.5">
                 {orders.map((order, rowIdx) => {
-                  const displayId = order.orderId || '—';
+                  const displayId = order.displayId || order.orderId || '—';
                   const rowKey    = order.orderId  || `order-row-${rowIdx}`;
                   const customerName = getCustomerName(order);
                   const customerEmail = getCustomerEmail(order);
@@ -1316,7 +1313,7 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack, onOr
             <div className="p-4 bg-slate-50 rounded-xl space-y-3 text-[12px] text-slate-600 font-semibold">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Order ID</span>
-                <span className="font-black text-slate-800 font-mono text-[11px]">{order.orderId}</span>
+                <span className="font-black text-slate-800 font-mono text-[11px]">{order.displayId || order.orderId}</span>
               </div>
               <div className="flex items-center gap-2">
                 <OrderStatusBadge status={currentStatus} compact />
@@ -1347,7 +1344,7 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack, onOr
             <span>Back to Orders</span>
           </button>
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight font-mono">{order.orderId}</h1>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight font-mono">{order.displayId || order.orderId}</h1>
             <OrderStatusBadge status={currentStatus} />
           </div>
           <p className="text-[12px] text-slate-400 font-semibold">
@@ -1605,7 +1602,7 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack, onOr
                 <div className="flex items-center justify-between py-2 border-b border-slate-50 text-[12px] font-semibold">
                   <span className="text-slate-400">Order ID</span>
                   <div className="flex items-center space-x-1.5 font-mono text-[10px]">
-                    <span className="text-blue-800 font-black bg-blue-50/60 px-1.5 py-0.5 border border-blue-100/50 rounded max-w-[125px] truncate" title={order.orderId}>{order.orderId}</span>
+                    <span className="text-blue-800 font-black bg-blue-50/60 px-1.5 py-0.5 border border-blue-100/50 rounded max-w-[125px] truncate" title={order.displayId || order.orderId}>{order.displayId || order.orderId}</span>
                     <button 
                       onClick={() => copyToClipboard(order.orderId, 'Order ID')} 
                       className="p-1 hover:bg-slate-50 border border-transparent hover:border-slate-150 rounded text-slate-400 hover:text-slate-700 transition-all cursor-pointer"
@@ -1731,7 +1728,7 @@ const OrderDetailPage: React.FC<OrderDetailPageProps> = ({ orderId, onBack, onOr
                 </div>
                 <div className="text-right">
                   <div className="text-[8px] font-bold text-slate-400">ORDER ID</div>
-                  <div className="font-bold text-slate-800">#{order.orderId.slice(0, 12).toUpperCase()}</div>
+                  <div className="font-bold text-slate-800">#{(order.displayId || order.orderId.slice(0, 12)).toUpperCase()}</div>
                 </div>
               </div>
 

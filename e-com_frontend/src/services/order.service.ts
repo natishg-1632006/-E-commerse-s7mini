@@ -72,6 +72,7 @@ export interface CustomerInfo {
 
 export interface Order {
   orderId: string;       // normalised from backend 'orderid'
+  displayId?: string;    // Human-readable reference ID
   userId?: string;
   email?: string;        // top-level email field from backend
   customerInfo?: CustomerInfo;
@@ -147,6 +148,9 @@ const normaliseOrder = (raw: any): Order => {
   const orderId: string =
     raw.orderid ?? raw.orderId ?? raw.order_id ?? raw.id ?? '';
 
+  const displayId: string | undefined =
+    raw.displayId ?? raw.display_id ?? undefined;
+
   // Shipping address object — all fields may be absent
   const shippingAddress: ShippingAddress = {
     fullName: raw.shippingAddress?.fullName ?? raw.shippingAddress?.full_name ?? '',
@@ -210,6 +214,7 @@ const normaliseOrder = (raw: any): Order => {
 
   return {
     orderId,
+    displayId,
     userId:        raw.userId ?? raw.user_id ?? undefined,
     email:         raw.email ?? undefined,
     customerInfo:  raw.customerInfo ?? undefined,

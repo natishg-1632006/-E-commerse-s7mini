@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { productService } from '../../services/product.service';
 import { brandService } from '../../services/brand.service';
+import { inventoryService } from '../../services/inventory.service';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { ProductsTableSkeleton, DetailPageSkeleton, SafeImage } from '../../components/admin/AdminSkeletons';
 import { getImageUrl } from '../../utils/imageHelper';
@@ -42,6 +43,7 @@ interface ProductImage {
 
 interface ProductItem {
   id: string;
+  displayId?: string;
   name: string;
   brand: string;
   category: string;
@@ -87,6 +89,40 @@ const ProductStatusBadge: React.FC<{ status: 'ACTIVE' | 'INACTIVE' | 'ARCHIVED' 
 };
 
 
+
+// --- Product Stat Card ---
+interface KpiCardProps {
+  label: string;
+  subLabel: string;
+  value: string | number;
+  icon: React.ReactNode;
+  iconBg: string;
+}
+
+const KpiCard: React.FC<KpiCardProps> = ({ label, subLabel, value, icon, iconBg }) => {
+  return (
+    <div
+      className="bg-white border border-slate-100 rounded-[12px] p-3.5 shadow-sm hover:shadow-md hover:border-slate-200 hover:-translate-y-0.5 transition-all duration-205 flex flex-col justify-between h-[105px] w-full cursor-default select-none text-left"
+    >
+      <div className="flex items-start justify-between gap-1">
+        <span className="text-[10px] font-black uppercase tracking-[0.4px] text-slate-400 whitespace-nowrap block max-w-[85%] truncate">
+          {label}
+        </span>
+        <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg} transition-all duration-300`}>
+          <span className="scale-90">{icon}</span>
+        </div>
+      </div>
+      <div className="flex flex-col justify-end flex-grow mt-1">
+        <div className="font-extrabold text-slate-900 leading-none text-[22px] transition-all duration-300 whitespace-nowrap">
+          {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
+        </div>
+        <div className="text-[11px] text-slate-400 font-bold mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis uppercase">
+          {subLabel}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const brandOptions = ['Apple', 'ASUS', 'Dell', 'Samsung', 'Lenovo', 'HP', 'Sony', 'Intel', 'AMD'];
 
@@ -436,6 +472,71 @@ const AdminProducts: React.FC = () => {
 
   // Backend dynamic lists
   const [productsList, setProductsList] = useState<ProductItem[]>([]);
+  const [kpiStats, setKpiStats] = useState({
+    total: 0,
+    active: 0,
+    outOfStock: 0,
+    lowStock: 0
+  });
+
+  const loadKpiStats = async () => {
+    try {
+      let prods: any[] = [];
+      let invs: any[] = [];
+
+      try {
+        const allProdsRes = await productService.getProducts({ limit: 1000 });
+        if (allProdsRes) {
+          if (Array.isArray(allProdsRes)) {
+            prods = allProdsRes;
+          } else {
+            prods = allProdsRes.products || allProdsRes.data || [];
+          }
+        }
+      } catch (prodErr) {
+        console.error('Error loading products for KPIs:', prodErr);
+      }
+
+      try {
+        const invRes = await inventoryService.getAllInventory();
+        if (invRes) {
+          if (Array.isArray(invRes)) {
+            invs = invRes;
+          } else {
+            invs = invRes.data || invRes.inventory || [];
+          }
+        }
+      } catch (invErr) {
+        console.error('Error loading inventory for KPIs:', invErr);
+      }
+
+      const getStockStatus = (p: any) => {
+        const invItem = invs.find((inv: any) => inv.productId === p.id || inv.productId === p.productId);
+        if (invItem) {
+          return (invItem.status || '').trim().toLowerCase();
+        }
+        const stock = p.stock !== undefined ? p.stock : (p.inventoryCount !== undefined ? p.inventoryCount : 0);
+        if (stock === 0) return 'out of stock';
+        if (stock <= 10) return 'low stock';
+        return 'in stock';
+      };
+
+      const total = prods.length;
+      const active = prods.filter((p: any) => (p.status || 'ACTIVE').toUpperCase() === 'ACTIVE').length;
+      const outOfStock = prods.filter((p: any) => {
+        const st = getStockStatus(p);
+        return st === 'out of stock' || st === 'outofstock';
+      }).length;
+      const lowStock = prods.filter((p: any) => {
+        const st = getStockStatus(p);
+        return st === 'low stock' || st === 'lowstock';
+      }).length;
+
+      setKpiStats({ total, active, outOfStock, lowStock });
+    } catch (err) {
+      console.error('Error loading product KPIs:', err);
+    }
+  };
   const [categoriesList, setCategoriesList] = useState<any[]>([]);
   const [brandOptionsList, setBrandOptionsList] = useState<string[]>(brandOptions);
   const [dbBrands, setDbBrands] = useState<string[]>([]);
@@ -598,6 +699,7 @@ const AdminProducts: React.FC = () => {
 
     return {
       id: p.id || p.productId || '',
+      displayId: p.displayId || p.display_id || undefined,
       name: p.name || '',
       brand: p.brand || '',
       category: p.category || p.categoryName || (p.categoryId ? getCategoryLabel(p.categoryId) : 'Uncategorized'),
@@ -670,6 +772,7 @@ const AdminProducts: React.FC = () => {
     };
     loadCategories();
     loadBrands();
+    loadKpiStats();
   }, []);
 
   // Main list fetcher
@@ -1043,6 +1146,7 @@ const AdminProducts: React.FC = () => {
       if (editingProductId) {
         await productService.updateProduct(editingProductId, payload);
         triggerToast('Product Updated Successfully');
+        loadKpiStats();
         
         // Refresh product details
         const res = await productService.getProductById(editingProductId);
@@ -1070,6 +1174,7 @@ const AdminProducts: React.FC = () => {
       } else {
         await productService.createProduct(payload);
         triggerToast('Product Created Successfully');
+        loadKpiStats();
         navigate('/admin/products');
         resetCreateForm();
       }
@@ -1111,6 +1216,7 @@ const AdminProducts: React.FC = () => {
       setProductToDelete(null);
       navigate('/admin/products');
       loadProducts();
+      loadKpiStats();
     } catch (err: any) {
       console.error('Error deleting product:', err);
       triggerToast(err.response?.data?.message || err.message || 'Failed to delete product.');
@@ -1368,6 +1474,38 @@ const AdminProducts: React.FC = () => {
               </button>
             </div>
 
+            {/* KPI Cards Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard
+                label="Total Products"
+                subLabel="All Catalog Items"
+                value={kpiStats.total}
+                icon={<Boxes className="w-4 h-4" />}
+                iconBg="bg-blue-50 text-blue-600 border border-blue-100/50"
+              />
+              <KpiCard
+                label="Active Products"
+                subLabel="Listed & Visible"
+                value={kpiStats.active}
+                icon={<CheckCircle className="w-4 h-4" />}
+                iconBg="bg-emerald-50 text-emerald-600 border border-emerald-100/50"
+              />
+              <KpiCard
+                label="Out of Stock"
+                subLabel="Needs Reorder"
+                value={kpiStats.outOfStock}
+                icon={<AlertTriangle className="w-4 h-4" />}
+                iconBg="bg-red-50 text-red-500 border border-red-100/50"
+              />
+              <KpiCard
+                label="Low Stock"
+                subLabel="Under 10 Units"
+                value={kpiStats.lowStock}
+                icon={<Sliders className="w-4 h-4" />}
+                iconBg="bg-amber-50 text-amber-600 border border-amber-100/50"
+              />
+            </div>
+
             {/* Search, Sort, and Filters Panel */}
             <div className="bg-white border border-slate-100 rounded-2xl p-4.5 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1584,7 +1722,7 @@ const AdminProducts: React.FC = () => {
                               {p.name}
                             </div>
                             <div className="text-[10px] text-slate-400 font-semibold mt-0.5 leading-none">
-                              {p.id}
+                              {p.displayId || p.id}
                             </div>
                           </div>
                         </div>

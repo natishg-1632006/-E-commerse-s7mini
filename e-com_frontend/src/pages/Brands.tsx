@@ -145,9 +145,16 @@ export const Brands: React.FC = () => {
                           {initials}
                         </div>
                       )}
-                      <h3 className="text-[13.5px] font-black text-slate-800 tracking-wider uppercase leading-tight truncate group-hover:text-blue-600 transition-colors font-brand-card">
-                        {brand.name}
-                      </h3>
+                      <div className="flex flex-col min-w-0">
+                        <h3 className="text-[13.5px] font-black text-slate-800 tracking-wider uppercase leading-tight truncate group-hover:text-blue-600 transition-colors font-brand-card">
+                          {brand.name}
+                        </h3>
+                        {brand.displayId && (
+                          <span className="text-[9.5px] text-slate-400 font-bold font-mono tracking-tight mt-0.5">
+                            #{brand.displayId}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Brand Description */}

@@ -23,6 +23,7 @@ brandApi.interceptors.request.use(
 
 export interface Brand {
   brandId: string;
+  displayId?: string; // Human-readable reference ID
   name: string;
   logoUrl?: string;
   description?: string;

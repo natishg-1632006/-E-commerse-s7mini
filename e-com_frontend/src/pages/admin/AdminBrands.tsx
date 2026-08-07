@@ -256,7 +256,7 @@ export const AdminBrands: React.FC = () => {
                         </h4>
                         <div className="text-[9px] text-slate-400 font-bold tracking-wide uppercase flex items-center space-x-1">
                           <Globe className="w-3 h-3 text-slate-350" />
-                          <span>ID: {brand.brandId.slice(0, 8)}...</span>
+                          <span>ID: {brand.displayId || brand.brandId.slice(0, 8)}</span>
                         </div>
                       </div>
                     </div>

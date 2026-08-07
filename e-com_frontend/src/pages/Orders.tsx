@@ -306,6 +306,7 @@ export const Orders: React.FC = () => {
 
       return {
         id: ord.orderId,
+        displayId: ord.displayId || ord.orderId,
         placedDate,
         deliveredDate: ['DELIVERED', 'COMPLETED'].includes(String(ord.orderStatus).toUpperCase()) ? formatDate(ord.updatedAt) : null,
         status: displayStatus,
@@ -688,7 +689,7 @@ export const Orders: React.FC = () => {
                           <div>
                             <div className="text-xs font-black text-slate-900 tracking-tight">{order.name}</div>
                             <div className="text-[10px] text-slate-400 font-bold mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                              <span>Order ID: <b className="text-blue-650">#{order.id}</b></span>
+                              <span>Order ID: <b className="text-blue-650">#{order.displayId || order.id}</b></span>
                               <span>•</span>
                               <span>{order.placedDate}</span>
                               {order.couponCode && (
@@ -889,7 +890,7 @@ export const Orders: React.FC = () => {
                       {/* Card Header Row */}
                       <div className="flex items-start justify-between">
                         <div className="space-y-0.5">
-                          <div className="text-xs font-black text-slate-800">Order #{order.id}</div>
+                          <div className="text-xs font-black text-slate-800">Order #{order.displayId || order.id}</div>
                           <div className="text-[10px] text-slate-450 font-bold">Placed on {order.placedDate}</div>
                           {order.couponCode && (
                             <div className="pt-1 select-none">

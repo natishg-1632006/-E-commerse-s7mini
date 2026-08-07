@@ -124,6 +124,7 @@ export const Checkout: React.FC = () => {
 
   // Random order details generated on payment completion
   const [orderId, setOrderId] = useState('');
+  const [displayId, setDisplayId] = useState('');
 
   // Coupon state
   const [couponCodeInput, setCouponCodeInput] = useState('');
@@ -178,6 +179,7 @@ export const Checkout: React.FC = () => {
         const existingOrder = await orderService.getOrderById(queryOrderId);
         if (existingOrder) {
           setOrderId(existingOrder.orderId);
+          setDisplayId(existingOrder.displayId || existingOrder.orderId);
           setOrderTotal(existingOrder.totalAmount);
           setOrderSubtotal(existingOrder.subtotal || existingOrder.totalAmount);
           setOrderItems(existingOrder.items || []);
@@ -434,39 +436,7 @@ export const Checkout: React.FC = () => {
     if (e) e.preventDefault();
     setSubmitted(true);
     if (validateForm()) {
-      setIsLoading(true);
-      try {
-        const shippingAddress = {
-          fullName,
-          phone: mobileNumber,
-          address: `${addressLine1}${addressLine2 ? ', ' : ''}${addressLine2}`,
-          city,
-          state: stateName,
-          pincode: pincode.replace(/\s/g, ''),
-        };
-
-        const order = await orderService.createOrder({
-          email: emailAddress,
-          shippingAddress,
-          paymentMethod: 'Card', // default placeholder, user selects actual method in next step
-          couponCode: appliedCoupon ? appliedCoupon.couponCode : undefined,
-        });
-
-        const createdOrderId = order.orderId;
-        setOrderId(createdOrderId);
-        setOrderTotal(order.totalAmount);
-        setOrderSubtotal(order.subtotal || order.totalAmount);
-        setOrderItems(order.items || []);
-        
-        dispatch(clearCart()); // Clear local cart state immediately upon successful order creation in backend
-        setActiveStep(3);
-      } catch (err: any) {
-        console.error('Error creating order:', err);
-        const backendMsg = err.response?.data?.message || err.response?.data?.error || err.message;
-        toast.error(backendMsg || 'Failed to place order.');
-      } finally {
-        setIsLoading(false);
-      }
+      setActiveStep(3);
     }
   };
 
@@ -491,12 +461,48 @@ export const Checkout: React.FC = () => {
       else if (paymentMethod === 'upi') mappedMethod = 'UPI';
       else if (paymentMethod === 'netbank') mappedMethod = 'NetBanking';
 
-      await paymentService.createPayment(orderId, mappedMethod);
-      setPaymentPending(false);
-      setActiveStep(4);
-      toast.success('Payment completed successfully!');
+      let targetOrderId = orderId;
+
+      if (!targetOrderId) {
+        const shippingAddress = {
+          fullName,
+          phone: mobileNumber,
+          address: `${addressLine1}${addressLine2 ? ', ' : ''}${addressLine2}`,
+          city,
+          state: stateName,
+          pincode: pincode.replace(/\s/g, ''),
+        };
+
+        const order = await orderService.createOrder({
+          email: emailAddress,
+          shippingAddress,
+          paymentMethod: mappedMethod,
+          couponCode: appliedCoupon ? appliedCoupon.couponCode : undefined,
+          orderStatus: mappedMethod === 'COD' ? 'PROCESSING' : 'PENDING_PAYMENT',
+        } as any);
+
+        targetOrderId = order.orderId;
+        setOrderId(targetOrderId);
+        setDisplayId(order.displayId || targetOrderId);
+        setOrderTotal(order.totalAmount);
+        setOrderSubtotal(order.subtotal || order.totalAmount);
+        setOrderItems(order.items || []);
+
+        dispatch(clearCart());
+      }
+
+      if (mappedMethod === 'COD') {
+        setPaymentPending(true);
+        setActiveStep(4);
+        toast.success('Order placed successfully! Please pay on delivery.');
+      } else {
+        await paymentService.createPayment(targetOrderId, mappedMethod);
+        setPaymentPending(false);
+        setActiveStep(4);
+        toast.success('Payment completed successfully!');
+      }
     } catch (err: any) {
-      console.error('Payment failed for order:', err);
+      console.error('Order/Payment submission failed:', err);
       setPaymentPending(true);
       setActiveStep(4);
       toast('Order created, but online payment is pending. Please complete your payment.', { icon: '⚠️' });
@@ -610,7 +616,7 @@ export const Checkout: React.FC = () => {
             <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 text-left space-y-3.5">
               <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
                 <span className="text-slate-455 font-bold">Order ID</span>
-                <span className="text-slate-800 font-black tracking-tight">{orderId}</span>
+                <span className="text-slate-800 font-black tracking-tight">{displayId || orderId}</span>
               </div>
               <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
                 <span className="text-slate-455 font-bold">Delivery Estimate</span>

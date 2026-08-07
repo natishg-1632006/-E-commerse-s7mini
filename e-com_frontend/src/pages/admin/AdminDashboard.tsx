@@ -6,6 +6,7 @@ import { AdminLayout } from '../../layouts/AdminLayout';
 import { DashboardSkeleton } from '../../components/admin/AdminSkeletons';
 import { orderService } from '../../services/order.service';
 import { productService } from '../../services/product.service';
+import { inventoryService } from '../../services/inventory.service';
 import {
   ShoppingCart,
   Wallet,
@@ -72,6 +73,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, iconB
 // --- Types for real data ---
 interface DashboardOrder {
   id: string;
+  displayId?: string;
   customer: string;
   amount: string;
   status: string;
@@ -81,6 +83,7 @@ interface DashboardOrder {
 }
 
 interface DashboardProduct {
+  id: string;
   rank: string;
   name: string;
   category: string;
@@ -165,13 +168,17 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const [ordersRes, productsRes] = await Promise.all([
+        const [ordersRes, productsRes, inventoryRes] = await Promise.all([
           orderService.getOrders({ limit: 1000 }),
           productService.getProducts({ limit: 1000 }),
+          inventoryService.getAllInventory(),
         ]);
 
         // ── Orders ──
-        const allOrders = ordersRes.orders || [];
+        const allOrders = (ordersRes.orders || []).filter((o: any) => {
+          const st = (o.orderStatus || '').toUpperCase();
+          return st !== 'PENDING_PAYMENT' && st !== 'PENDING PAYMENT' && st !== 'PENDING';
+        });
         const todayStr = new Date().toISOString().split('T')[0];
 
         const revenue = allOrders
@@ -191,6 +198,7 @@ const AdminDashboard: React.FC = () => {
         // Recent 5 orders
         const mapped: DashboardOrder[] = allOrders.slice(0, 5).map(o => ({
           id: o.orderId,
+          displayId: o.displayId || o.orderId,
           customer: o.shippingAddress?.fullName || o.customerInfo?.fullName || 'Unknown',
           amount: `₹${(o.totalAmount || 0).toLocaleString('en-IN')}`,
           status: o.orderStatus || 'Pending Payment',
@@ -212,19 +220,37 @@ const AdminDashboard: React.FC = () => {
           }
         }
 
-        const oos = allProducts.filter(p => Number(p.stock ?? 0) === 0).length;
+        let inventoryList: any[] = [];
+        if (inventoryRes) {
+          if (Array.isArray(inventoryRes)) {
+            inventoryList = inventoryRes;
+          } else {
+            inventoryList = inventoryRes.data || [];
+          }
+        }
+
+        const oos = inventoryList.filter(inv => {
+          const isOut = String(inv.status).trim().toLowerCase() === 'out of stock' || 
+                        Number(inv.currentStock ?? inv.availableStock ?? 0) === 0;
+          return isOut;
+        }).length;
         setOutOfStockCount(oos);
 
         const medals = ['🥇', '🥈', '🥉', '4', '5'];
-        const top: DashboardProduct[] = allProducts.slice(0, 5).map((p: any, idx: number) => ({
-          rank: medals[idx] || String(idx + 1),
-          name: p.name || 'Unknown Product',
-          category: p.category || 'Uncategorized',
-          rev: `₹${(p.price || 0).toLocaleString('en-IN')}`,
-          stock: Number(p.stock ?? 0),
-          img: p.images?.[0]?.imageUrl || p.img || null,
-          price: Number(p.price ?? 0),
-        }));
+        const top: DashboardProduct[] = allProducts.slice(0, 5).map((p: any, idx: number) => {
+          const invItem = inventoryList.find(inv => inv.productId === p.id || inv.productId === p.productId);
+          const stockCount = invItem ? Number(invItem.currentStock ?? invItem.availableStock ?? 0) : 0;
+          return {
+            id: p.id || p.productId || '',
+            rank: medals[idx] || String(idx + 1),
+            name: p.name || 'Unknown Product',
+            category: p.category || p.categoryName || 'Uncategorized',
+            rev: `₹${(p.price || 0).toLocaleString('en-IN')}`,
+            stock: stockCount,
+            img: p.images?.[0]?.imageUrl || p.img || null,
+            price: Number(p.price ?? 0),
+          };
+        });
         setTopSelling(top);
 
       } catch (err) {
@@ -415,7 +441,7 @@ const AdminDashboard: React.FC = () => {
                     recentOrders.map((order) => (
                       <div
                         key={order.id}
-                        onClick={() => navigate('/admin/orders')}
+                        onClick={() => navigate(`/admin/orders/${order.id}`)}
                         className="flex flex-col sm:grid sm:grid-cols-12 items-start sm:items-center px-3.5 py-2.5 rounded-xl border border-slate-100 hover:border-blue-150 hover:bg-slate-50/40 hover:shadow-sm transition-all duration-200 cursor-pointer group gap-2.5 sm:gap-0"
                       >
                         {/* 1. Order details: col-span-4 */}
@@ -425,7 +451,7 @@ const AdminDashboard: React.FC = () => {
                           </div>
                           <div className="min-w-0 text-left">
                             <div className="text-[12.5px] font-bold text-slate-800 leading-tight">
-                              {order.id}
+                              {order.displayId || order.id}
                             </div>
                             <div className="text-[10.5px] text-slate-400 font-semibold mt-0.5 leading-none flex items-center gap-1">
                               <User className="w-3.5 h-3.5 text-slate-355 flex-shrink-0" />
@@ -488,8 +514,8 @@ const AdminDashboard: React.FC = () => {
                     const isMedal = ['🥇', '🥈', '🥉'].includes(product.rank);
                     return (
                       <div
-                        key={product.name}
-                        onClick={() => navigate('/admin/products')}
+                        key={product.id || product.name}
+                        onClick={() => navigate(`/admin/products/${product.id}`)}
                         className="flex flex-col sm:grid sm:grid-cols-12 items-start sm:items-center px-3.5 py-2.5 rounded-xl border border-slate-100 hover:border-blue-150 hover:bg-slate-50/40 hover:shadow-sm transition-all duration-200 cursor-pointer group gap-2.5 sm:gap-0"
                       >
                         {/* 1. Product details: col-span-4 */}

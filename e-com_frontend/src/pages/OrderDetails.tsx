@@ -243,7 +243,7 @@ export const OrderDetails: React.FC = () => {
             <div className="bg-slate-50 border border-slate-150 rounded-2xl p-3.5 text-xs font-bold text-slate-655 space-y-1 font-mono">
               <div className="flex justify-between">
                 <span className="text-slate-400">Order ID:</span>
-                <span className="text-blue-650 font-black">#{(orderId || '').slice(0, 12)}...</span>
+                <span className="text-blue-650 font-black">#{order?.displayId || (orderId || '').slice(0, 12)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Total Price:</span>
@@ -307,7 +307,7 @@ export const OrderDetails: React.FC = () => {
           <div className="space-y-2">
             <div className="flex items-center space-x-2.5">
               <span className="text-xs font-black text-slate-400 font-mono tracking-tight">Order ID</span>
-              <span className="text-sm font-black text-slate-900 font-mono">#{order.orderId}</span>
+              <span className="text-sm font-black text-slate-900 font-mono">#{order.displayId || order.orderId}</span>
               <button
                 onClick={() => copyToClipboard(order.orderId)}
                 className="p-1 text-slate-400 hover:text-slate-700 transition-colors rounded-lg hover:bg-slate-50 cursor-pointer border-none bg-transparent"

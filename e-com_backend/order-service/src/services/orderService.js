@@ -307,7 +307,7 @@ const createOrder = async (userId, email, shippingAddress, paymentMethod, token,
 
     paymentStatus: PAYMENT_STATUS.PENDING,
 
-    orderStatus: ORDER_STATUS.PENDING_PAYMENT,
+    orderStatus: paymentMethod === 'COD' ? ORDER_STATUS.PROCESSING : ORDER_STATUS.PENDING_PAYMENT,
 
     inventoryUpdated: false,
 
@@ -327,7 +327,7 @@ const createOrder = async (userId, email, shippingAddress, paymentMethod, token,
 
     statusHistory: [
       {
-        status: ORDER_STATUS.PENDING_PAYMENT,
+        status: paymentMethod === 'COD' ? ORDER_STATUS.PROCESSING : ORDER_STATUS.PENDING_PAYMENT,
         timestamp: now,
       },
     ],

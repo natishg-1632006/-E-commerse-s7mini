@@ -17,27 +17,20 @@ import {
   AlertTriangle,
   Loader2,
   MapPin,
-  Mail,
   User,
   ExternalLink,
   ChevronLeft,
   Filter,
   ArrowUpDown,
   Lock,
+  ChevronDown,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { customerService } from '../../services/customer.service';
 import type { Customer } from '../../services/customer.service';
 import { orderService } from '../../services/order.service';
 import type { Order } from '../../services/order.service';
-import { analyticsService } from '../../services/analytics.service';
-import type { SalesGrowthAnalyticsData } from '../../services/analytics.service';
-import {
-  WeeklySalesLogChart,
-  PeakOrderHoursChart,
-  TopSellingProductsBarChart,
-  MonthlySalesLogChart,
-} from '../../components/admin/SalesGrowthCharts';
-import { TrendingUp } from 'lucide-react';
+
 
 const CustomerStatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const norm = (status || '').trim().toLowerCase();
@@ -95,13 +88,84 @@ const CustomerStatCard: React.FC<CustomerStatCardProps> = ({ label, value, icon,
   );
 };
 
+// --- Generic Filter Dropdown ---
+interface FilterDropdownProps {
+  label: string;
+  selected: string;
+  options: { value: string; label: string }[];
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+  onSelect: (value: string) => void;
+  icon?: React.ReactNode;
+}
+
+const FilterDropdown: React.FC<FilterDropdownProps> = ({ label, selected, options, isOpen, setIsOpen, onSelect, icon }) => {
+  const activeLabel = options.find(o => o.value === selected)?.label || '';
+  return (
+    <div className="relative text-left">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`h-9 pl-3 pr-7.5 rounded-xl border text-slate-700 text-[11px] font-bold transition-all flex items-center justify-between shadow-sm focus:ring-2 focus:ring-blue-500/10 focus:border-blue-400 outline-none cursor-pointer ${
+          isOpen
+            ? 'bg-slate-50/80 border-blue-600 ring-4 ring-blue-600/10'
+            : 'bg-white hover:bg-slate-50/60 border-slate-200 hover:border-slate-350 shadow-sm shadow-slate-105/40'
+        }`}
+      >
+        <div className="flex items-center space-x-1.5 truncate">
+          {icon && <span className="text-slate-450 w-3.5 h-3.5 flex items-center justify-center">{icon}</span>}
+          <span className="truncate">{label}: {activeLabel}</span>
+        </div>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-450 flex-shrink-0 absolute right-2.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute right-0 mt-2 z-30 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 w-40 flex flex-col animate-fadeIn"
+          onMouseLeave={() => setIsOpen(false)}
+        >
+          {options.map(option => (
+            <button
+              key={option.value}
+              onClick={() => {
+                onSelect(option.value);
+                setIsOpen(false);
+              }}
+              className={`w-full text-left px-3.5 py-2 text-[11px] font-bold transition-colors hover:bg-slate-50 ${
+                selected === option.value ? 'text-blue-600 bg-blue-50/10' : 'text-slate-655'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AdminCustomers: React.FC = () => {
+  const navigate = useNavigate();
   // Lists & filters states
   const [customersList, setCustomersList] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive' | 'Blocked' | 'Suspended'>('All');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [isStatusOpen, setIsStatusOpen] = useState(false);
+  const [isSortOpen, setIsSortOpen] = useState(false);
+
+  const statusOptions = [
+    { value: 'All', label: 'All Statuses' },
+    { value: 'Active', label: 'Active' },
+    { value: 'Inactive', label: 'Inactive' },
+    { value: 'Blocked', label: 'Blocked' },
+    { value: 'Suspended', label: 'Suspended' },
+  ];
+
+  const sortOptions = [
+    { value: 'newest', label: 'Newest First' },
+    { value: 'oldest', label: 'Oldest First' },
+  ];
   
   // Status check loading flags
   const [loading, setLoading] = useState(true);
@@ -128,23 +192,12 @@ const AdminCustomers: React.FC = () => {
 
   // Modals & confirmation triggers
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
-  const [pendingStatusConfirm, setPendingStatusConfirm] = useState<{
-    userId: string;
-    status: 'Active' | 'Inactive' | 'Blocked' | 'Suspended';
-  } | null>(null);
 
   // Stats calculation maps
   const [customerOrdersMap, setCustomerOrdersMap] = useState<Record<string, { count: number; spent: number }>>({});
-  const [activeViewTab, setActiveViewTab] = useState<'directory' | 'sales_intelligence'>('directory');
-  const [salesGrowthData, setSalesGrowthData] = useState<SalesGrowthAnalyticsData | null>(null);
-
-  useEffect(() => {
-    analyticsService.getSalesGrowthAnalytics().then(setSalesGrowthData).catch(console.error);
-  }, []);
   
   // Action state flags
   const [isSaving, setIsSaving] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -153,10 +206,19 @@ const AdminCustomers: React.FC = () => {
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  const loadOrdersForStats = async () => {
+  const loadCustomersData = async (silent = false) => {
+    if (!silent) setLoading(true);
+    else setIsRefreshing(true);
     try {
-      const res = await orderService.getOrders({ limit: 1000 });
-      const orders = res.orders || [];
+      const [users, ordersRes] = await Promise.all([
+        customerService.getAllCustomers(),
+        orderService.getOrders({ limit: 1000 })
+      ]);
+      
+      const orders = (ordersRes.orders || []).filter((o: any) => {
+        const st = (o.orderStatus || '').toUpperCase();
+        return st !== 'PENDING_PAYMENT' && st !== 'PENDING PAYMENT' && st !== 'PENDING';
+      });
       const statsMap: Record<string, { count: number; spent: number }> = {};
       orders.forEach(o => {
         const uid = o.userId || o.customerInfo?.userId;
@@ -171,18 +233,7 @@ const AdminCustomers: React.FC = () => {
         }
       });
       setCustomerOrdersMap(statsMap);
-    } catch (err) {
-      console.error('Error aggregation for orders stats:', err);
-    }
-  };
-
-  const loadCustomersData = async (silent = false) => {
-    if (!silent) setLoading(true);
-    else setIsRefreshing(true);
-    try {
-      const users = await customerService.getAllCustomers();
       setCustomersList(users);
-      await loadOrdersForStats();
     } catch (err: any) {
       console.error('Error loading customers:', err);
       triggerToast(err.response?.data?.message || err.message || 'Failed to fetch customer logs.');
@@ -240,8 +291,12 @@ const AdminCustomers: React.FC = () => {
       setEditAddrState(fresh.address?.state || '');
       setEditAddrPincode(fresh.address?.pincode || '');
 
-      const orderRes = await orderService.getOrders({ customerId: cust.userId });
-      setRecentOrders(orderRes.orders || []);
+      const orders = await orderService.getOrdersByUser(cust.userId);
+      const filteredOrders = (orders || []).filter(o => {
+        const st = (o.orderStatus || '').toUpperCase();
+        return st !== 'PENDING_PAYMENT' && st !== 'PENDING PAYMENT' && st !== 'PENDING';
+      });
+      setRecentOrders(filteredOrders || []);
     } catch (err) {
       console.error('Error fetching details:', err);
       triggerToast('Failed to load profile details from server.');
@@ -283,22 +338,10 @@ const AdminCustomers: React.FC = () => {
     setIsSaving(true);
     setValidationError(null);
 
-    const addressPayload = editAddrStreet.trim() || editAddrCity.trim() || editAddrState.trim() || editAddrPincode.trim()
-      ? {
-          fullName: editAddrName.trim() || editName.trim(),
-          phone: editAddrPhone.trim() || editPhone.trim(),
-          address: editAddrStreet.trim(),
-          city: editAddrCity.trim(),
-          state: editAddrState.trim(),
-          pincode: editAddrPincode.trim()
-        }
-      : null;
-
     const payload: Partial<Customer> = {
       fullName: editName.trim(),
       phone: editPhone.trim(),
-      status: editStatus,
-      address: addressPayload
+      status: editStatus
     };
 
     try {
@@ -322,32 +365,7 @@ const AdminCustomers: React.FC = () => {
     }
   };
 
-  const triggerStatusChangeConfirm = (status: 'Active' | 'Inactive' | 'Blocked' | 'Suspended') => {
-    if (!selectedCustomer) return;
-    setPendingStatusConfirm({
-      userId: selectedCustomer.userId,
-      status
-    });
-  };
 
-  const executeStatusChange = async () => {
-    if (!pendingStatusConfirm || !selectedCustomer) return;
-    setIsUpdatingStatus(true);
-    const { userId, status } = pendingStatusConfirm;
-    setPendingStatusConfirm(null);
-    try {
-      await customerService.updateCustomerStatus(userId, status);
-      triggerToast('Customer status updated successfully.');
-      setSelectedCustomer(prev => prev ? { ...prev, status } : null);
-      setEditStatus(status);
-      await loadCustomersData(true);
-    } catch (err: any) {
-      console.error('Error updating status:', err);
-      triggerToast(err.response?.data?.message || err.message || 'Failed to update user status.');
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  };
 
   const getInitials = (name?: string | null, email?: string) => {
     if (name && name.trim()) {
@@ -388,16 +406,17 @@ const AdminCustomers: React.FC = () => {
     return stats ? stats.count : 0;
   };
 
-  // Aggregated dynamic stats computation
-  const totalCustomers = customersList.length;
-  const activeCustomers = customersList.filter(c => (c.status || 'Active').toLowerCase() === 'active').length;
+  // Aggregated dynamic stats computation (only customers with >= 1 order)
+  const customersWhoOrdered = customersList.filter(c => (customerOrdersMap[c.userId]?.count || 0) >= 1);
+  const totalCustomers = customersWhoOrdered.length;
+  const activeCustomers = customersWhoOrdered.filter(c => (c.status || 'Active').toLowerCase() === 'active').length;
   
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const newCustomers = customersList.filter(c => new Date(c.createdAt || 0).getTime() >= thirtyDaysAgo.getTime()).length;
+  const newCustomers = customersWhoOrdered.filter(c => new Date(c.createdAt || 0).getTime() >= thirtyDaysAgo.getTime()).length;
 
   // Search filter and sorting
-  const filteredCustomers = customersList.filter(c => {
+  const filteredCustomers = customersWhoOrdered.filter(c => {
     const matchesSearch = 
       (c.email || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
       (c.fullName || '').toLowerCase().includes(debouncedSearch.toLowerCase()) ||
@@ -448,48 +467,12 @@ const AdminCustomers: React.FC = () => {
             <div className="border-b border-slate-100 pb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <div className="text-[12px] font-bold text-blue-600 tracking-wider uppercase">CRM Hub</div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">Customers & Sales Intelligence</h1>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight mt-1">Customers</h1>
                 <p className="text-[12.5px] text-slate-550 font-medium mt-0.5">
-                  Manage user base, analyze customer buying patterns and peak order hours
+                  Manage and view all customer records in your store
                 </p>
               </div>
-
-              {/* View Tab Switcher */}
-              <div className="bg-slate-100 p-1 rounded-2xl flex items-center space-x-1 self-start sm:self-auto">
-                <button
-                  onClick={() => setActiveViewTab('directory')}
-                  className={`px-3.5 py-1.5 rounded-xl text-[12px] font-extrabold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                    activeViewTab === 'directory' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  <span>Customer Directory</span>
-                </button>
-                <button
-                  onClick={() => setActiveViewTab('sales_intelligence')}
-                  className={`px-3.5 py-1.5 rounded-xl text-[12px] font-extrabold transition-all cursor-pointer flex items-center space-x-1.5 ${
-                    activeViewTab === 'sales_intelligence' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <span>Sales Behavior & Peak Hours</span>
-                </button>
-              </div>
             </div>
-
-            {activeViewTab === 'sales_intelligence' ? (
-              <div className="space-y-6 animate-fadeIn pt-2">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  <PeakOrderHoursChart timeSlots={salesGrowthData?.peakOrderHours} />
-                  <TopSellingProductsBarChart products={salesGrowthData?.topSellingProductsRanked} />
-                </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  <WeeklySalesLogChart data={salesGrowthData?.weeklySalesLog} />
-                  <MonthlySalesLogChart data={salesGrowthData?.monthlySalesLog} />
-                </div>
-              </div>
-            ) : (
-              <React.Fragment>
 
             {/* KPI Statistics block */}
             {loading ? (
@@ -535,32 +518,25 @@ const AdminCustomers: React.FC = () => {
 
               {/* Filtering / Sorting Controls */}
               <div className="flex items-center gap-3 self-end md:self-auto">
-                <div className="flex items-center space-x-1.5">
-                  <Filter className="w-3.5 h-3.5 text-slate-400" />
-                  <select
-                    value={statusFilter}
-                    onChange={e => setStatusFilter(e.target.value as any)}
-                    className="h-9 px-3 bg-white border border-slate-200 focus:border-blue-600 focus:outline-none rounded-xl text-[11.5px] font-bold text-slate-655 cursor-pointer"
-                  >
-                    <option value="All">All Statuses</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Blocked">Blocked</option>
-                    <option value="Suspended">Suspended</option>
-                  </select>
-                </div>
+                <FilterDropdown
+                  label="Status"
+                  selected={statusFilter}
+                  options={statusOptions}
+                  isOpen={isStatusOpen}
+                  setIsOpen={setIsStatusOpen}
+                  onSelect={(val) => setStatusFilter(val as any)}
+                  icon={<Filter className="w-3.5 h-3.5" />}
+                />
 
-                <div className="flex items-center space-x-1.5">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-                  <select
-                    value={sortBy}
-                    onChange={e => setSortBy(e.target.value as any)}
-                    className="h-9 px-3 bg-white border border-slate-200 focus:border-blue-600 focus:outline-none rounded-xl text-[11.5px] font-bold text-slate-655 cursor-pointer"
-                  >
-                    <option value="newest">Newest First</option>
-                    <option value="oldest">Oldest First</option>
-                  </select>
-                </div>
+                <FilterDropdown
+                  label="Sort"
+                  selected={sortBy}
+                  options={sortOptions}
+                  isOpen={isSortOpen}
+                  setIsOpen={setIsSortOpen}
+                  onSelect={(val) => setSortBy(val as any)}
+                  icon={<ArrowUpDown className="w-3.5 h-3.5" />}
+                />
               </div>
             </div>
 
@@ -595,8 +571,12 @@ const AdminCustomers: React.FC = () => {
                       >
                         {/* 1. Profile initials / text */}
                         <div className="col-span-3 flex items-center space-x-2.5 w-full sm:w-auto text-left">
-                          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(c.userId)} flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 shadow-sm`}>
-                            {getInitials(c.fullName, c.email)}
+                          <div className={`w-8 h-8 rounded-full bg-gradient-to-br ${getAvatarColor(c.userId)} flex items-center justify-center text-white text-[10px] font-black flex-shrink-0 shadow-sm overflow-hidden`}>
+                            {c.profileImage ? (
+                              <img src={c.profileImage} alt="profile" className="w-full h-full object-cover" />
+                            ) : (
+                              getInitials(c.fullName, c.email)
+                            )}
                           </div>
                           <div className="min-w-0">
                             <div className="text-[12.5px] font-bold text-slate-800 leading-tight truncate">
@@ -682,8 +662,6 @@ const AdminCustomers: React.FC = () => {
                 )}
               </div>
             )}
-          </React.Fragment>
-        )}
       </>
     ) : (
           /* ================= CUSTOMER WORKSPACE VIEW ================= */
@@ -700,16 +678,17 @@ const AdminCustomers: React.FC = () => {
                 </button>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <div className="flex items-center space-x-3">
-                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${getAvatarColor(selectedCustomer.userId)} flex items-center justify-center text-white text-[12px] font-black shadow-sm`}>
-                      {getInitials(selectedCustomer.fullName, selectedCustomer.email)}
+                    <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${getAvatarColor(selectedCustomer.userId)} flex items-center justify-center text-white text-[12px] font-black shadow-sm overflow-hidden`}>
+                      {selectedCustomer.profileImage ? (
+                        <img src={selectedCustomer.profileImage} alt="profile" className="w-full h-full object-cover" />
+                      ) : (
+                        getInitials(selectedCustomer.fullName, selectedCustomer.email)
+                      )}
                     </div>
                     <div className="text-left">
                       <h1 className="text-xl font-black text-slate-900 leading-tight tracking-tight">
                         {selectedCustomer.fullName || 'No Name Registered'}
                       </h1>
-                      <div className="text-[11px] text-slate-400 font-semibold leading-none mt-0.5">
-                        {selectedCustomer.email}
-                      </div>
                     </div>
                   </div>
                   <CustomerStatusBadge status={selectedCustomer.status || 'Active'} />
@@ -769,78 +748,7 @@ const AdminCustomers: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Address information card */}
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-5 text-left animate-slideDown">
-                    <h3 className="text-[13.5px] font-black text-slate-900">Registered Shipping Address</h3>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-1">Recipient Name</span>
-                          <input
-                            type="text"
-                            value={editAddrName}
-                            onChange={e => setEditAddrName(e.target.value)}
-                            placeholder="Same as profile if blank"
-                            className="w-full h-11 px-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-650 focus:outline-none rounded-xl text-[12.5px] font-semibold text-slate-750 transition-all"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-1">Contact Phone</span>
-                          <input
-                            type="text"
-                            value={editAddrPhone}
-                            onChange={e => setEditAddrPhone(e.target.value)}
-                            placeholder="Same as profile if blank"
-                            className="w-full h-11 px-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-650 focus:outline-none rounded-xl text-[12.5px] font-semibold text-slate-750 transition-all"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-1">Street Address</span>
-                        <input
-                          type="text"
-                          value={editAddrStreet}
-                          onChange={e => setEditAddrStreet(e.target.value)}
-                          placeholder="123 Main Road, Building A"
-                          className="w-full h-11 px-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-650 focus:outline-none rounded-xl text-[12.5px] font-semibold text-slate-750 transition-all"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-1.5">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-1">City</span>
-                          <input
-                            type="text"
-                            value={editAddrCity}
-                            onChange={e => setEditAddrCity(e.target.value)}
-                            placeholder="Mumbai"
-                            className="w-full h-11 px-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-650 focus:outline-none rounded-xl text-[12.5px] font-semibold text-slate-750 transition-all"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-1">State</span>
-                          <input
-                            type="text"
-                            value={editAddrState}
-                            onChange={e => setEditAddrState(e.target.value)}
-                            placeholder="Maharashtra"
-                            className="w-full h-11 px-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-650 focus:outline-none rounded-xl text-[12.5px] font-semibold text-slate-750 transition-all"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider pl-1">Pincode</span>
-                          <input
-                            type="text"
-                            value={editAddrPincode}
-                            onChange={e => setEditAddrPincode(e.target.value)}
-                            placeholder="400001"
-                            className="w-full h-11 px-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-blue-650 focus:outline-none rounded-xl text-[12.5px] font-semibold text-slate-750 transition-all"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Address editing removed for Admin protection */}
 
                   {/* Cancel / Save triggers */}
                   <div className="flex justify-end items-center space-x-3 pt-2">
@@ -910,15 +818,7 @@ const AdminCustomers: React.FC = () => {
                         </div>
                       </div>
 
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
-                          <Mail className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <span className="text-slate-400 block text-[9.5px] uppercase font-extrabold leading-none">Email Address</span>
-                          <span className="text-slate-800 font-bold block mt-1 truncate max-w-[200px]">{selectedCustomer.email}</span>
-                        </div>
-                      </div>
+                      {/* Email display removed */}
 
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
@@ -939,6 +839,16 @@ const AdminCustomers: React.FC = () => {
                           <span className="text-slate-800 font-bold block mt-1">
                             {new Date(selectedCustomer.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
                           </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-3 sm:col-span-2 border-t border-slate-50 pt-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
+                          <Lock className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9.5px] uppercase font-extrabold leading-none">User ID (System GUID)</span>
+                          <span className="text-slate-800 font-bold block mt-1 font-mono text-[11.5px] select-all">{selectedCustomer.userId}</span>
                         </div>
                       </div>
                     </div>
@@ -998,12 +908,14 @@ const AdminCustomers: React.FC = () => {
                           </thead>
                           <tbody>
                             {recentOrders.map(o => (
-                              <tr key={o.orderId} className="border-b border-slate-50 hover:bg-slate-50/30">
+                              <tr 
+                                key={o.orderId} 
+                                onClick={() => navigate(`/admin/orders/${o.orderId}`)}
+                                className="border-b border-slate-50 hover:bg-slate-50/30 cursor-pointer"
+                              >
                                 <td className="px-4 py-2.5 font-bold text-blue-600 flex items-center space-x-1.5">
-                                  <span>{o.orderId.substring(0, 8)}</span>
-                                  <a href={`/orders`} className="text-slate-400 hover:text-blue-600">
-                                    <ExternalLink className="w-3 h-3" />
-                                  </a>
+                                  <span>{o.displayId || o.orderId.substring(0, 8)}</span>
+                                  <ExternalLink className="w-3 h-3 text-blue-500" />
                                 </td>
                                 <td className="px-4 py-2.5 text-[11.5px] text-slate-500">
                                   {new Date(o.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
@@ -1054,86 +966,14 @@ const AdminCustomers: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Quick status actions panel */}
-                  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm space-y-4 text-left">
-                    <h3 className="text-[13.5px] font-black text-slate-900">Account Access Rules</h3>
-                    <div className="space-y-2 flex flex-col pt-1">
-                      <span className="text-[9.5px] font-black uppercase text-slate-400 pl-1">Toggle Customer Status</span>
-                      
-                      <div className="grid grid-cols-2 gap-2 text-[11.5px] font-bold">
-                        <button
-                          type="button"
-                          disabled={isUpdatingStatus || (selectedCustomer.status || 'Active') === 'Active'}
-                          onClick={() => triggerStatusChangeConfirm('Active')}
-                          className="h-9 rounded-xl border border-emerald-250 text-emerald-700 bg-emerald-50/20 hover:bg-emerald-50 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
-                        >
-                          🟢 Set Active
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isUpdatingStatus || selectedCustomer.status === 'Inactive'}
-                          onClick={() => triggerStatusChangeConfirm('Inactive')}
-                          className="h-9 rounded-xl border border-slate-250 text-slate-600 bg-slate-50 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
-                        >
-                          ⚪ Set Inactive
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isUpdatingStatus || selectedCustomer.status === 'Blocked'}
-                          onClick={() => triggerStatusChangeConfirm('Blocked')}
-                          className="h-9 rounded-xl border border-red-250 text-red-650 bg-red-50/25 hover:bg-red-50 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
-                        >
-                          🔴 Set Blocked
-                        </button>
-                        <button
-                          type="button"
-                          disabled={isUpdatingStatus || selectedCustomer.status === 'Suspended'}
-                          onClick={() => triggerStatusChangeConfirm('Suspended')}
-                          className="h-9 rounded-xl border border-amber-250 text-amber-700 bg-amber-50/25 hover:bg-amber-50 disabled:opacity-40 disabled:pointer-events-none transition-all cursor-pointer"
-                        >
-                          🟡 Set Suspended
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Account status settings removed */}
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* Status Confirmation Modal */}
-        {pendingStatusConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-fadeIn">
-            <div className="bg-white border border-slate-100 rounded-2xl p-5 w-full max-w-sm shadow-xl space-y-4 text-left">
-              <div className="flex items-center space-x-2.5 text-amber-500">
-                <AlertTriangle className="w-5.5 h-5.5 animate-pulse" />
-                <h3 className="text-[14px] font-black text-slate-900 leading-tight">Change User Status?</h3>
-              </div>
-              
-              <p className="text-[11.5px] text-slate-500 font-semibold leading-relaxed">
-                Are you sure you want to transition this account status to <strong className="text-slate-800 uppercase">{pendingStatusConfirm.status}</strong>?
-              </p>
 
-              <div className="flex items-center space-x-3 justify-end pt-1">
-                <button
-                  type="button"
-                  onClick={() => setPendingStatusConfirm(null)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 text-[12px] font-bold text-slate-655 rounded-xl transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={executeStatusChange}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-bold rounded-xl transition-all shadow-md shadow-blue-600/25 active:scale-95 cursor-pointer"
-                >
-                  Confirm Status Change
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Discard changes warning Modal */}
         {showDiscardConfirm && (
