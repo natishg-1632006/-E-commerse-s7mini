@@ -5,6 +5,9 @@ const { getOrderById } = require('../utils/orderApi');
 const { PAYMENT_STATUS, ORDER_STATUS } = require('../constants/paymentConstants');
 const { publishPaymentEvent } = require('./snsService');
 
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_TN93PUkmyaRzUI';
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '9QdIvQLHpl2FMW4sFOasXlYv';
+
 const publishOrderEvent = async (eventType, payment) => {
   const order = await getOrderById(payment.orderId);
   await publishPaymentEvent(eventType, payment, order);
@@ -30,57 +33,75 @@ const createPayment = async (orderId, userId, paymentMethod) => {
   const isCOD = paymentMethod === 'COD';
   const now = new Date().toISOString();
 
-  const payment = {
-    paymentid: uuidv4(),
-    orderId,
-    userId,
-    amount: order.totalAmount,
-    paymentMethod,
-    transactionId:
-      paymentMethod === 'COD'
-        ? `COD-${uuidv4().split('-')[0].toUpperCase()}`
-        : `DEV-TXN-${uuidv4().split('-')[0].toUpperCase()}`,
-    status: PAYMENT_STATUS.PAID,
-    createdAt: now,
-  };
+  if (isCOD) {
+    const payment = {
+      paymentid: uuidv4(),
+      orderId,
+      userId,
+      amount: order.totalAmount,
+      paymentMethod,
+      transactionId: `COD-${uuidv4().split('-')[0].toUpperCase()}`,
+      status: PAYMENT_STATUS.PAID,
+      createdAt: now,
+    };
 
-  await docClient.send(new PutCommand({ TableName: PAYMENTS_TABLE, Item: payment }));
-  console.log(`[Payment] Created | paymentId: ${payment.paymentid} | orderId: ${orderId} | userId: ${userId} | method: ${paymentMethod} | amount: ${payment.amount} | timestamp: ${now}`);
-  // Development Mode
-  // Every payment is treated as successful immediately.
+    await docClient.send(new PutCommand({ TableName: PAYMENTS_TABLE, Item: payment }));
+    console.log(`[Payment] Created | paymentId: ${payment.paymentid} | orderId: ${orderId} | userId: ${userId} | method: ${paymentMethod} | amount: ${payment.amount} | timestamp: ${now}`);
 
-  await docClient.send(
-    new UpdateCommand({
-      TableName: PAYMENTS_TABLE,
-      Key: { paymentid: payment.paymentid },
-      UpdateExpression: 'SET #status = :status, updatedAt = :at',
-      ExpressionAttributeNames: {
-        '#status': 'status',
+    try {
+      console.log('[SNS] Publishing PAYMENT_SUCCESS (COD)');
+      await publishOrderEvent('PAYMENT_SUCCESS', payment);
+    } catch (err) {
+      console.error('[SNS] Publish failed:', err);
+    }
+
+    return payment;
+  } else {
+    // Online Payment -> Initialize Razorpay Order
+    const amountInPaise = Math.round(order.totalAmount * 100);
+    const authHeader = 'Basic ' + Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
+    
+    console.log(`[Razorpay] Creating Order | amount: ${amountInPaise} paise | receipt: ${orderId}`);
+    const rpRes = await fetch('https://api.razorpay.com/v1/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
       },
-      ExpressionAttributeValues: {
-        ':status': PAYMENT_STATUS.PAID,
-        ':at': new Date().toISOString(),
-      },
-    })
-  );
-
-  payment.status = PAYMENT_STATUS.PAID;
-
-  console.log(
-    `[Payment] Payment confirmed | paymentId: ${payment.paymentid} | orderId: ${orderId} | paymentMethod: ${paymentMethod}`
-  );
-
-  try {
-    console.log('[SNS] Publishing PAYMENT_SUCCESS');
-
-    await publishOrderEvent('PAYMENT_SUCCESS', payment);
-
-    console.log('[SNS] PAYMENT_SUCCESS published successfully');
-  } catch (err) {
-    console.error('[SNS] Publish failed:', err);
+      body: JSON.stringify({
+        amount: amountInPaise,
+        currency: 'INR',
+        receipt: orderId
+      })
+    });
+    
+    const rpOrder = await rpRes.json();
+    if (!rpRes.ok) {
+      console.error('[Razorpay] Order creation failed:', rpOrder);
+      throw Object.assign(new Error(rpOrder.error?.description || 'Razorpay order creation failed'), { statusCode: 500 });
+    }
+    
+    const payment = {
+      paymentid: uuidv4(),
+      orderId,
+      userId,
+      amount: order.totalAmount,
+      paymentMethod,
+      transactionId: rpOrder.id,
+      razorpayOrderId: rpOrder.id,
+      status: PAYMENT_STATUS.PENDING,
+      createdAt: now,
+    };
+    
+    await docClient.send(new PutCommand({ TableName: PAYMENTS_TABLE, Item: payment }));
+    console.log(`[Payment] Created Pending | paymentId: ${payment.paymentid} | orderId: ${orderId} | razorpayOrderId: ${rpOrder.id}`);
+    
+    return {
+      ...payment,
+      razorpayKeyId: RAZORPAY_KEY_ID,
+      razorpayOrderId: rpOrder.id
+    };
   }
-
-  return payment;
 };
 
 const getPaymentById = async (paymentid) => {
@@ -220,8 +241,82 @@ const getAllPayments = async () => {
   return Items;
 };
 
+const verifyPayment = async (orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature, userId) => {
+  // Validate signature
+  const crypto = require('crypto');
+  const text = razorpayOrderId + "|" + razorpayPaymentId;
+  const generated_signature = crypto
+    .createHmac('sha256', RAZORPAY_KEY_SECRET)
+    .update(text)
+    .digest('hex');
+
+  const isValid = generated_signature === razorpaySignature;
+  
+  // Find the payment record in DynamoDB by orderId or razorpayOrderId
+  const payment = await getPaymentByOrderId(orderId);
+  if (!payment) {
+    throw Object.assign(new Error('Payment record not found for this order'), { statusCode: 404 });
+  }
+
+  if (payment.userId !== userId) {
+    throw Object.assign(new Error('Unauthorized'), { statusCode: 403 });
+  }
+
+  const now = new Date().toISOString();
+
+  if (isValid) {
+    // Update status to PAID
+    const { Attributes } = await docClient.send(
+      new UpdateCommand({
+        TableName: PAYMENTS_TABLE,
+        Key: { paymentid: payment.paymentid },
+        UpdateExpression: 'SET #status = :status, transactionId = :txn, updatedAt = :at',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+          ':status': PAYMENT_STATUS.PAID,
+          ':txn': razorpayPaymentId,
+          ':at': now,
+        },
+        ReturnValues: 'ALL_NEW',
+      })
+    );
+
+    console.log(`[Payment] Verified Success | paymentId: ${payment.paymentid} | orderId: ${orderId} | txnId: ${razorpayPaymentId}`);
+    try {
+      await publishOrderEvent('PAYMENT_SUCCESS', Attributes);
+    } catch (err) {
+      console.error('[SNS] Publish failed', err);
+    }
+    return Attributes;
+  } else {
+    // Update status to FAILED
+    const { Attributes } = await docClient.send(
+      new UpdateCommand({
+        TableName: PAYMENTS_TABLE,
+        Key: { paymentid: payment.paymentid },
+        UpdateExpression: 'SET #status = :status, updatedAt = :at',
+        ExpressionAttributeNames: { '#status': 'status' },
+        ExpressionAttributeValues: {
+          ':status': PAYMENT_STATUS.FAILED,
+          ':at': now,
+        },
+        ReturnValues: 'ALL_NEW',
+      })
+    );
+
+    console.log(`[Payment] Verified Failed | paymentId: ${payment.paymentid} | orderId: ${orderId}`);
+    try {
+      await publishOrderEvent('PAYMENT_FAILED', Attributes);
+    } catch (err) {
+      console.error('[SNS] Publish failed', err);
+    }
+    throw Object.assign(new Error('Invalid payment signature'), { statusCode: 400 });
+  }
+};
+
 module.exports = {
   createPayment,
+  verifyPayment,
   getPaymentById,
   getPaymentByOrderId,
   updatePaymentStatus,

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminLayout } from '../../layouts/AdminLayout';
+import { AnimatedCounter } from '../../components/common/AnimatedCounter';
 import { InventoryTableSkeleton, DetailPageSkeleton } from '../../components/admin/AdminSkeletons';
 import {
   AlertTriangle,
@@ -629,79 +630,102 @@ const AdminInventory: React.FC = () => {
             )}
 
             {/* Quick statistics highlights block */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              <div 
-                onClick={() => { setStatusFilter('All'); setViewMode('all'); }}
-                className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Products</span>
-                  <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
-                    <Boxes className="w-3.5 h-3.5" />
+            {loading ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                {[1, 2, 3, 4, 5, 6].map(idx => (
+                  <div key={idx} className="bg-white border border-slate-100 rounded-[16px] p-4 h-[90px] flex flex-col justify-between shadow-sm animate-pulse">
+                    <div className="flex justify-between items-center"><div className="h-2.5 w-16 bg-slate-200 rounded" /><div className="w-7 h-7 bg-slate-100 rounded-full" /></div>
+                    <div className="h-5 w-10 bg-slate-300 rounded mt-2" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div 
+                  onClick={() => { setStatusFilter('All'); setViewMode('all'); }}
+                  className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Products</span>
+                    <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                      <Boxes className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-black text-slate-800 mt-2 leading-none">
+                    <AnimatedCounter value={inventoryList.length} />
                   </div>
                 </div>
-                <div className="text-xl font-black text-slate-800 mt-2 leading-none">{inventoryList.length}</div>
-              </div>
 
-              <div 
-                onClick={() => { setStatusFilter('In Stock'); setViewMode('all'); }}
-                className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-200 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">In Stock</span>
-                  <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-650 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-3.5 h-3.5 animate-pulse" />
+                <div 
+                  onClick={() => { setStatusFilter('In Stock'); setViewMode('all'); }}
+                  className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-emerald-200 transition-all duration-200 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">In Stock</span>
+                    <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-650 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle className="w-3.5 h-3.5 animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-black text-slate-800 mt-2 leading-none">
+                    <AnimatedCounter value={inStockCount} />
                   </div>
                 </div>
-                <div className="text-xl font-black text-slate-800 mt-2 leading-none">{inStockCount}</div>
-              </div>
 
-              <div 
-                onClick={() => { setStatusFilter('Low Stock'); setViewMode('low-stock'); }}
-                className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-200 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Low Stock</span>
-                  <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-3.5 h-3.5" />
+                <div 
+                  onClick={() => { setStatusFilter('Low Stock'); setViewMode('low-stock'); }}
+                  className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-amber-200 transition-all duration-200 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Low Stock</span>
+                    <div className="w-7 h-7 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-black text-slate-800 mt-2 leading-none">
+                    <AnimatedCounter value={lowStockCount} />
                   </div>
                 </div>
-                <div className="text-xl font-black text-slate-800 mt-2 leading-none">{lowStockCount}</div>
-              </div>
 
-              <div 
-                onClick={() => { setStatusFilter('Out of Stock'); setViewMode('low-stock'); }}
-                className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-red-200 transition-all duration-200 cursor-pointer"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Out Of Stock</span>
-                  <div className="w-7 h-7 rounded-full bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
-                    <AlertTriangle className="w-3.5 h-3.5" />
+                <div 
+                  onClick={() => { setStatusFilter('Out of Stock'); setViewMode('low-stock'); }}
+                  className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md hover:border-red-200 transition-all duration-200 cursor-pointer"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Out Of Stock</span>
+                    <div className="w-7 h-7 rounded-full bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-black text-slate-800 mt-2 leading-none">
+                    <AnimatedCounter value={outOfStockCount} />
                   </div>
                 </div>
-                <div className="text-xl font-black text-slate-800 mt-2 leading-none">{outOfStockCount}</div>
-              </div>
 
-              <div className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200 cursor-default">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reserved</span>
-                  <div className="w-7 h-7 rounded-full bg-slate-50 text-slate-500 flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-3.5 h-3.5" />
+                <div className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200 cursor-default">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reserved</span>
+                    <div className="w-7 h-7 rounded-full bg-slate-50 text-slate-500 flex items-center justify-center flex-shrink-0">
+                      <Clock className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-black text-slate-800 mt-2 leading-none">
+                    <AnimatedCounter value={totalReserved} />
                   </div>
                 </div>
-                <div className="text-xl font-black text-slate-800 mt-2 leading-none">{totalReserved.toLocaleString()}</div>
-              </div>
 
-              <div className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200 cursor-default">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Sold</span>
-                  <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
-                    <ShoppingBag className="w-3.5 h-3.5" />
+                <div className="bg-white border border-slate-100 rounded-[16px] p-4 flex flex-col justify-between shadow-sm hover:shadow-md transition-all duration-200 cursor-default">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Sold</span>
+                    <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                    </div>
+                  </div>
+                  <div className="text-xl font-black text-slate-800 mt-2 leading-none">
+                    <AnimatedCounter value={totalSold} />
                   </div>
                 </div>
-                <div className="text-xl font-black text-slate-800 mt-2 leading-none">{totalSold.toLocaleString()}</div>
               </div>
-            </div>
+            )}
 
             {/* Search, Custom Status Filters & Premium Custom Sort selector row */}
             <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">

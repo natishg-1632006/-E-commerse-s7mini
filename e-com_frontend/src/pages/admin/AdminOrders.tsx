@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { AnimatedCounter } from '../../components/common/AnimatedCounter';
 import { motion } from 'framer-motion';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import {
@@ -314,7 +315,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, subLabel, value, icon, iconBg 
       </div>
       <div className="flex flex-col justify-end flex-grow mt-1.5">
         <div className={`font-bold text-slate-900 leading-none tabular-nums transition-all duration-300 whitespace-nowrap ${getValSize(value)}`}>
-          {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
+          <AnimatedCounter value={value} />
         </div>
         <div className="text-[11px] text-slate-500 font-medium mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis">
           {subLabel}
@@ -378,6 +379,7 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ onSelectOrder }) => {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef    = useRef<AbortController | null>(null);
+  const hasMountedRef = useRef(false);
 
   const triggerToast = (msg: string) => { setToastMsg(msg); setTimeout(() => setToastMsg(null), 3500); };
 
@@ -450,6 +452,10 @@ const OrderListPage: React.FC<OrderListPageProps> = ({ onSelectOrder }) => {
 
   // ── Debounced search ───────────────────────────────────────────────────────
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => { setPage(1); fetchOrders(false); }, 400);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };

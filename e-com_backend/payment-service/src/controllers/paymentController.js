@@ -12,6 +12,23 @@ const createPayment = async (req, res, next) => {
   }
 };
 
+const verifyPayment = async (req, res, next) => {
+  try {
+    const { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    const userId = req.user.sub;
+    const payment = await service.verifyPayment(
+      orderId,
+      razorpayPaymentId,
+      razorpayOrderId,
+      razorpaySignature,
+      userId
+    );
+    success(res, payment);
+  } catch (err) {
+    next(err);
+  }
+};
+
 const getPayment = async (req, res, next) => {
   try {
     const payment = await service.getPaymentById(req.params.id);
@@ -53,6 +70,7 @@ const getAllPayments = async (req, res, next) => {
 
 module.exports = {
   createPayment,
+  verifyPayment,
   getPayment,
   getPaymentByOrder,
   updatePaymentStatus,

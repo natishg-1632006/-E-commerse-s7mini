@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { AnimatedCounter } from '../../components/common/AnimatedCounter';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import {
   Search,
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 import { couponService } from '../../services/coupon.service';
 import type { Coupon } from '../../services/coupon.service';
+import { CouponsTableSkeleton, DetailPageSkeleton } from '../../components/admin/AdminSkeletons';
 import { productService } from '../../services/product.service';
 import { categoryService } from '../../services/category.service';
 import toast from 'react-hot-toast';
@@ -87,7 +89,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, subLabel, value, icon, iconBg 
       </div>
       <div className="flex flex-col justify-end flex-grow mt-1">
         <div className="font-extrabold text-slate-900 leading-none text-[22px] transition-all duration-300 whitespace-nowrap">
-          {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
+          <AnimatedCounter value={value} />
         </div>
         <div className="text-[11px] text-slate-400 font-bold mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis uppercase">
           {subLabel}
@@ -492,36 +494,47 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({ mode = 'list' }) => 
 
         {/* KPI CARDS GRID */}
         {mode === 'list' && (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard
-              label="Total Coupons"
-              subLabel="All Campaign Codes"
-              value={stats.total}
-              icon={<Ticket className="w-4 h-4" />}
-              iconBg="bg-blue-50 text-blue-600 border border-blue-100/50"
-            />
-            <KpiCard
-              label="Active Coupons"
-              subLabel="Live & Usable"
-              value={stats.active}
-              icon={<CheckCircle className="w-4 h-4" />}
-              iconBg="bg-emerald-50 text-emerald-600 border border-emerald-100/50"
-            />
-            <KpiCard
-              label="Expired Coupons"
-              subLabel="Past Validity Date"
-              value={stats.expired}
-              icon={<Calendar className="w-4 h-4" />}
-              iconBg="bg-red-50 text-red-500 border border-red-100/50"
-            />
-            <KpiCard
-              label="Inactive Coupons"
-              subLabel="Paused Campaigns"
-              value={stats.inactive}
-              icon={<Clock className="w-4 h-4" />}
-              iconBg="bg-amber-50 text-amber-600 border border-amber-100/50"
-            />
-          </div>
+          isListingLoading ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].map(idx => (
+                <div key={idx} className="h-[105px] bg-white border border-slate-100 rounded-[12px] p-3.5 shadow-sm animate-pulse">
+                  <div className="flex justify-between items-center"><div className="h-3 w-16 bg-slate-200 rounded" /><div className="w-6 h-6 bg-slate-100 rounded-lg" /></div>
+                  <div className="h-6 w-12 bg-slate-300 rounded mt-3" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <KpiCard
+                label="Total Coupons"
+                subLabel="All Campaign Codes"
+                value={stats.total}
+                icon={<Ticket className="w-4 h-4" />}
+                iconBg="bg-blue-50 text-blue-600 border border-blue-100/50"
+              />
+              <KpiCard
+                label="Active Coupons"
+                subLabel="Live & Usable"
+                value={stats.active}
+                icon={<CheckCircle className="w-4 h-4" />}
+                iconBg="bg-emerald-50 text-emerald-600 border border-emerald-100/50"
+              />
+              <KpiCard
+                label="Expired Coupons"
+                subLabel="Past Validity Date"
+                value={stats.expired}
+                icon={<Calendar className="w-4 h-4" />}
+                iconBg="bg-red-50 text-red-500 border border-red-100/50"
+              />
+              <KpiCard
+                label="Inactive Coupons"
+                subLabel="Paused Campaigns"
+                value={stats.inactive}
+                icon={<Clock className="w-4 h-4" />}
+                iconBg="bg-amber-50 text-amber-600 border border-amber-100/50"
+              />
+            </div>
+          )
         )}
 
         {/* LIST VIEW PANEL */}
@@ -592,10 +605,7 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({ mode = 'list' }) => 
             {/* MAIN TABLE */}
             <div className="overflow-x-auto">
               {isListingLoading ? (
-                <div className="py-24 text-center space-y-3">
-                  <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
-                  <p className="text-xs text-slate-455 font-bold">Retrieving coupons data, please wait...</p>
-                </div>
+                <CouponsTableSkeleton />
               ) : filteredCoupons.length === 0 ? (
                 <div className="py-24 text-center space-y-4">
                   <div className="w-12 h-12 bg-slate-50 border border-slate-100 rounded-full flex items-center justify-center mx-auto text-slate-400">
@@ -732,10 +742,7 @@ export const AdminCoupons: React.FC<AdminCouponsProps> = ({ mode = 'list' }) => 
         {mode !== 'list' && (
           <div className="space-y-6">
             {isDetailLoading ? (
-              <div className="py-24 text-center bg-white border border-slate-200/50 rounded-2xl p-6.5 shadow-sm space-y-3 animate-pulse">
-                <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
-                <p className="text-xs text-slate-400 font-bold">Loading Coupon Details...</p>
-              </div>
+              <DetailPageSkeleton />
             ) : (
               <form onSubmit={handleSaveCoupon} className="space-y-6">
                 

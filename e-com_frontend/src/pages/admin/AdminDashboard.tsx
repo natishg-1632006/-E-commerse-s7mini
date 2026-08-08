@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import type { RootState } from '../../store';
+import { AnimatedCounter } from '../../components/common/AnimatedCounter';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import { DashboardSkeleton } from '../../components/admin/AdminSkeletons';
 import { orderService } from '../../services/order.service';
@@ -58,7 +59,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, iconB
       
       <div className="flex items-end justify-between mt-1">
         <span className={`text-3xl font-black tracking-tight leading-none ${highlight ? 'text-red-650' : 'text-slate-800'}`}>
-          {value}
+          <AnimatedCounter value={value} />
         </span>
         {growth && (
           <span className="text-[11px] font-black text-emerald-500 bg-emerald-50 px-2 py-0.5 rounded-lg flex items-center">

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Logo } from '../../common/Logo';
-import { Search } from '../../ui/Search';
 import { ShoppingCart, Menu, X, Heart, ChevronDown } from 'lucide-react';
 import { UserMenu } from '../UserMenu';
 import { MobileMenu } from '../MobileMenu';
@@ -31,7 +30,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   showSidebarToggle = false,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
-  const [searchQuery, setSearchQuery] = useState('');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMegamenuOpen, setIsMegamenuOpen] = useState(false);
   const megamenuRef = useRef<HTMLDivElement | null>(null);
@@ -154,10 +152,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </nav>
           </div>
 
-          {/* Center: Search Bar */}
-          <div className="hidden md:block flex-1 max-w-[340px] lg:max-w-[400px] mx-auto">
-            <Search value={searchQuery} onChange={setSearchQuery} placeholder="Search for products, brands..." />
-          </div>
+
 
           {/* Right Side: Navigation Actions */}
           <div className="flex items-center space-x-3.5">

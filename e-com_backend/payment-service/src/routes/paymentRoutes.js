@@ -3,6 +3,7 @@ const controller = require('../controllers/paymentController');
 const {
   createPaymentRules,
   updateStatusRules,
+  verifyPaymentRules,
 } = require('../validations/paymentValidation');
 
 const authMiddleware = require('../middleware/authMiddleware');
@@ -15,6 +16,15 @@ router.post(
   authorize('Customer'),
   createPaymentRules,
   controller.createPayment
+);
+
+// Customer - Verify Payment (Razorpay verification)
+router.post(
+  '/verify',
+  authMiddleware,
+  authorize('Customer'),
+  verifyPaymentRules,
+  controller.verifyPayment
 );
 
 // Customer & Admin - Get Payment by Order

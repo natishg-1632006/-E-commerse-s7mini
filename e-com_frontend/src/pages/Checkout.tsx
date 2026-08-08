@@ -31,6 +31,20 @@ import { couponService } from '../services/coupon.service';
 import { productService } from '../services/product.service';
 import { getImageUrl } from '../utils/imageHelper';
 
+const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if ((window as any).Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+};
+
 export const Checkout: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
@@ -496,10 +510,60 @@ export const Checkout: React.FC = () => {
         setActiveStep(4);
         toast.success('Order placed successfully! Please pay on delivery.');
       } else {
-        await paymentService.createPayment(targetOrderId, mappedMethod);
-        setPaymentPending(false);
+        const payRes = await paymentService.createPayment(targetOrderId, mappedMethod);
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          toast.error('Failed to load Razorpay Checkout SDK. Please try again.');
+          setPaymentPending(true);
+          setActiveStep(4);
+          return;
+        }
+
+        const options = {
+          key: payRes.razorpayKeyId,
+          amount: Math.round(payRes.amount * 100),
+          currency: 'INR',
+          name: 'Tech Store',
+          description: `Payment for Order #${displayId || targetOrderId}`,
+          order_id: payRes.razorpayOrderId,
+          handler: async function (response: any) {
+            setIsLoading(true);
+            try {
+              await paymentService.verifyPayment(
+                targetOrderId,
+                response.razorpay_payment_id,
+                response.razorpay_order_id,
+                response.razorpay_signature
+              );
+              setPaymentPending(false);
+              toast.success('Payment completed successfully!');
+            } catch (err: any) {
+              console.error('Payment verification failed:', err);
+              setPaymentPending(true);
+              toast.error('Payment verification failed. Please check with your bank.');
+            } finally {
+              setIsLoading(false);
+            }
+          },
+          prefill: {
+            name: fullName || '',
+            contact: mobileNumber || '',
+          },
+          theme: {
+            color: '#2563EB',
+          },
+          modal: {
+            ondismiss: function () {
+              setPaymentPending(true);
+              toast('Payment closed. You can retry paying anytime.', { icon: 'ℹ️' });
+            }
+          }
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+        setPaymentPending(true);
         setActiveStep(4);
-        toast.success('Payment completed successfully!');
       }
     } catch (err: any) {
       console.error('Order/Payment submission failed:', err);
@@ -642,9 +706,62 @@ export const Checkout: React.FC = () => {
                       if (paymentMethod === 'cod') mappedMethod = 'COD';
                       else if (paymentMethod === 'upi') mappedMethod = 'UPI';
                       else if (paymentMethod === 'netbank') mappedMethod = 'NetBanking';
-                      await paymentService.createPayment(orderId, mappedMethod);
-                      setPaymentPending(false);
-                      toast.success('Payment completed successfully!');
+                      
+                      if (mappedMethod === 'COD') {
+                        await paymentService.createPayment(orderId, mappedMethod);
+                        setPaymentPending(false);
+                        toast.success('Payment confirmed as COD.');
+                        return;
+                      }
+
+                      const payRes = await paymentService.createPayment(orderId, mappedMethod);
+                      const scriptLoaded = await loadRazorpayScript();
+                      if (!scriptLoaded) {
+                        toast.error('Failed to load Razorpay Checkout SDK. Please try again.');
+                        return;
+                      }
+
+                      const options = {
+                        key: payRes.razorpayKeyId,
+                        amount: Math.round(payRes.amount * 100),
+                        currency: 'INR',
+                        name: 'Tech Store',
+                        description: `Payment for Order #${displayId || orderId}`,
+                        order_id: payRes.razorpayOrderId,
+                        handler: async function (response: any) {
+                          setIsPaying(true);
+                          try {
+                            await paymentService.verifyPayment(
+                              orderId,
+                              response.razorpay_payment_id,
+                              response.razorpay_order_id,
+                              response.razorpay_signature
+                            );
+                            setPaymentPending(false);
+                            toast.success('Payment completed successfully!');
+                          } catch (err: any) {
+                            console.error('Payment verification failed:', err);
+                            toast.error('Payment verification failed. Please check with your bank.');
+                          } finally {
+                            setIsPaying(false);
+                          }
+                        },
+                        prefill: {
+                          name: fullName || '',
+                          contact: mobileNumber || '',
+                        },
+                        theme: {
+                          color: '#2563EB',
+                        },
+                        modal: {
+                          ondismiss: function () {
+                            toast('Payment closed.', { icon: 'ℹ️' });
+                          }
+                        }
+                      };
+
+                      const rzp = new (window as any).Razorpay(options);
+                      rzp.open();
                     } catch (err: any) {
                       console.error('Payment retry failed:', err);
                       toast.error('Payment failed. Please try again or pay from My Orders.');

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { CustomersTableSkeleton, CustomerStatCardSkeleton, DetailPageSkeleton } from '../../components/admin/AdminSkeletons';
+import { AnimatedCounter } from '../../components/common/AnimatedCounter';
 import { AdminLayout } from '../../layouts/AdminLayout';
 import {
   Search,
@@ -79,7 +80,9 @@ const CustomerStatCard: React.FC<CustomerStatCardProps> = ({ label, value, icon,
     <div className="bg-white border border-slate-100 rounded-[16px] p-4 flex items-center justify-between shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer">
       <div>
         <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{label}</span>
-        <div className="text-2xl font-black text-slate-800 mt-0.5 leading-none">{value}</div>
+        <div className="text-2xl font-black text-slate-800 mt-0.5 leading-none">
+          <AnimatedCounter value={value} />
+        </div>
       </div>
       <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${iconBgColor}`}>
         {icon}

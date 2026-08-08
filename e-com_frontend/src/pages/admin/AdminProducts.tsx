@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { AnimatedCounter } from '../../components/common/AnimatedCounter';
 import { productService } from '../../services/product.service';
 import { brandService } from '../../services/brand.service';
 import { inventoryService } from '../../services/inventory.service';
@@ -114,7 +115,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ label, subLabel, value, icon, iconBg 
       </div>
       <div className="flex flex-col justify-end flex-grow mt-1">
         <div className="font-extrabold text-slate-900 leading-none text-[22px] transition-all duration-300 whitespace-nowrap">
-          {typeof value === 'number' ? value.toLocaleString('en-IN') : value}
+          <AnimatedCounter value={value} />
         </div>
         <div className="text-[11px] text-slate-400 font-bold mt-1.5 whitespace-nowrap overflow-hidden text-ellipsis uppercase">
           {subLabel}
@@ -1475,36 +1476,47 @@ const AdminProducts: React.FC = () => {
             </div>
 
             {/* KPI Cards Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <KpiCard
-                label="Total Products"
-                subLabel="All Catalog Items"
-                value={kpiStats.total}
-                icon={<Boxes className="w-4 h-4" />}
-                iconBg="bg-blue-50 text-blue-600 border border-blue-100/50"
-              />
-              <KpiCard
-                label="Active Products"
-                subLabel="Listed & Visible"
-                value={kpiStats.active}
-                icon={<CheckCircle className="w-4 h-4" />}
-                iconBg="bg-emerald-50 text-emerald-600 border border-emerald-100/50"
-              />
-              <KpiCard
-                label="Out of Stock"
-                subLabel="Needs Reorder"
-                value={kpiStats.outOfStock}
-                icon={<AlertTriangle className="w-4 h-4" />}
-                iconBg="bg-red-50 text-red-500 border border-red-100/50"
-              />
-              <KpiCard
-                label="Low Stock"
-                subLabel="Under 10 Units"
-                value={kpiStats.lowStock}
-                icon={<Sliders className="w-4 h-4" />}
-                iconBg="bg-amber-50 text-amber-600 border border-amber-100/50"
-              />
-            </div>
+            {loading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map(idx => (
+                  <div key={idx} className="h-[105px] bg-white border border-slate-100 rounded-[12px] p-3.5 shadow-sm animate-pulse">
+                    <div className="flex justify-between items-center"><div className="h-3 w-16 bg-slate-200 rounded" /><div className="w-6 h-6 bg-slate-100 rounded-lg" /></div>
+                    <div className="h-6 w-12 bg-slate-300 rounded mt-3" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <KpiCard
+                  label="Total Products"
+                  subLabel="All Catalog Items"
+                  value={kpiStats.total}
+                  icon={<Boxes className="w-4 h-4" />}
+                  iconBg="bg-blue-50 text-blue-600 border border-blue-100/50"
+                />
+                <KpiCard
+                  label="Active Products"
+                  subLabel="Listed & Visible"
+                  value={kpiStats.active}
+                  icon={<CheckCircle className="w-4 h-4" />}
+                  iconBg="bg-emerald-50 text-emerald-600 border border-emerald-100/50"
+                />
+                <KpiCard
+                  label="Out of Stock"
+                  subLabel="Needs Reorder"
+                  value={kpiStats.outOfStock}
+                  icon={<AlertTriangle className="w-4 h-4" />}
+                  iconBg="bg-red-50 text-red-500 border border-red-100/50"
+                />
+                <KpiCard
+                  label="Low Stock"
+                  subLabel="Under 10 Units"
+                  value={kpiStats.lowStock}
+                  icon={<Sliders className="w-4 h-4" />}
+                  iconBg="bg-amber-50 text-amber-600 border border-amber-100/50"
+                />
+              </div>
+            )}
 
             {/* Search, Sort, and Filters Panel */}
             <div className="bg-white border border-slate-100 rounded-2xl p-4.5 shadow-sm space-y-4">

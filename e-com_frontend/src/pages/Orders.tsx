@@ -674,8 +674,88 @@ export const Orders: React.FC = () => {
             {/* Orders Listing Grid */}
             <div className="space-y-5">
               {filteredOrders.length > 0 ? (
-                filteredOrders.map((order) => (
-                  <React.Fragment key={order.id}>
+                searchQuery.trim() !== '' ? (
+                  /* Compact search results table */
+                  <div className="bg-white border border-slate-200/60 rounded-3xl overflow-hidden shadow-sm">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-[11.5px] border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                            <th className="px-6 py-4 font-black">Order</th>
+                            <th className="px-6 py-4 font-black">Order ID</th>
+                            <th className="px-6 py-4 font-black">Date Placed</th>
+                            <th className="px-6 py-4 font-black">Total</th>
+                            <th className="px-6 py-4 font-black text-center">Status</th>
+                            <th className="px-6 py-4 font-black text-right pr-6">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {filteredOrders.map((order) => (
+                            <tr key={order.id} className="hover:bg-slate-50/50 transition-colors">
+                              {/* Order Image + Title */}
+                              <td className="px-6 py-4">
+                                <div className="flex items-center space-x-3.5 max-w-[280px]">
+                                  <div className="w-10 h-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center p-1.5 flex-shrink-0">
+                                    <img src={order.image} alt={order.name} className="w-full h-full object-contain" />
+                                  </div>
+                                  <div className="truncate font-bold text-slate-800 tracking-tight">
+                                    {order.name}
+                                  </div>
+                                </div>
+                              </td>
+                              {/* Order ID */}
+                              <td className="px-6 py-4 font-mono font-bold text-blue-650">
+                                #{order.displayId || order.id}
+                              </td>
+                              {/* Date */}
+                              <td className="px-6 py-4 text-slate-500 font-semibold">
+                                {order.placedDate}
+                              </td>
+                              {/* Total Price */}
+                              <td className="px-6 py-4 font-black text-slate-800">
+                                <Price value={order.paymentSummary.total} />
+                              </td>
+                              {/* Status Badge */}
+                              <td className="px-6 py-4 text-center">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                                  ['Delivered', 'Completed'].includes(order.status)
+                                    ? 'bg-emerald-55 border-emerald-100 text-emerald-700 font-extrabold'
+                                    : order.status === 'Cancelled'
+                                    ? 'bg-rose-50 border-rose-100 text-rose-600 font-extrabold'
+                                    : 'bg-blue-50 border border-blue-100/50 text-blue-600 font-extrabold'
+                                }`}>
+                                  {order.status}
+                                </span>
+                              </td>
+                              {/* Actions */}
+                              <td className="px-6 py-4 text-right pr-6">
+                                <div className="flex items-center justify-end space-x-2">
+                                  {order.status === 'Pending Payment' && (
+                                    <button
+                                      onClick={() => handlePayNow(order.id)}
+                                      className="h-7 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-[10px] font-black tracking-wider uppercase transition-all shadow-sm shadow-amber-500/10 active:scale-95 cursor-pointer border-none"
+                                    >
+                                      Pay Now
+                                    </button>
+                                  )}
+                                  <Link
+                                    to={`/orders/${order.id}`}
+                                    className="h-7 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-black tracking-wider uppercase transition-all shadow-sm shadow-blue-600/10 active:scale-95 flex items-center justify-center cursor-pointer"
+                                  >
+                                    View
+                                  </Link>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <React.Fragment key={order.id}>
+
                     
                     {/* Desktop Card Layout */}
                     <div className="hidden sm:flex bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm flex-col space-y-6 text-left">
@@ -1039,8 +1119,10 @@ export const Orders: React.FC = () => {
                       </div>
                     </div>
 
-                  </React.Fragment>
-                ))
+
+                    </React.Fragment>
+                  ))
+                )
               ) : (
                 <div className="bg-white border border-slate-200/60 rounded-3xl p-12 text-center text-slate-500">
                   No orders matched your search query.

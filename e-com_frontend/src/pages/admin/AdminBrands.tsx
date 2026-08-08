@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AdminLayout } from '../../layouts/AdminLayout';
+import { AnimatedCounter } from '../../components/common/AnimatedCounter';
 import { brandService } from '../../services/brand.service';
 import type { Brand } from '../../services/brand.service';
 import toast from 'react-hot-toast';
@@ -159,7 +160,7 @@ export const AdminBrands: React.FC = () => {
               <div className="flex flex-col">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Total Brands</span>
                 <span className="text-2xl font-black text-slate-800 tracking-tight leading-none mt-1">
-                  {isLoading ? <Bone className="h-6 w-12 mt-1" /> : totalBrandsCount}
+                  {isLoading ? <Bone className="h-6 w-12 mt-1" /> : <AnimatedCounter value={totalBrandsCount} />}
                 </span>
                 <span className="text-[9px] text-slate-455 font-bold tracking-wide mt-1">Active vendor classifications</span>
               </div>
@@ -174,7 +175,7 @@ export const AdminBrands: React.FC = () => {
               <div className="flex flex-col">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Recent Brands</span>
                 <span className="text-2xl font-black text-slate-800 tracking-tight leading-none mt-1">
-                  {isLoading ? <Bone className="h-6 w-12 mt-1" /> : recentBrandsCount}
+                  {isLoading ? <Bone className="h-6 w-12 mt-1" /> : <AnimatedCounter value={recentBrandsCount} />}
                 </span>
                 <span className="text-[9px] text-slate-455 font-bold tracking-wide mt-1">Introduced in last 30 days</span>
               </div>

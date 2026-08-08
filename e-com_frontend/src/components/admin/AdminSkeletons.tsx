@@ -498,6 +498,37 @@ export const DetailPageSkeleton: React.FC<{ columns?: number }> = ({ columns = 2
   </>
 );
 
+export const CouponsTableSkeleton: React.FC = () => (
+  <>
+    <ShimmerStyle />
+    <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden flex flex-col pt-1">
+      <div className="hidden sm:grid sm:grid-cols-12 items-center border-b border-slate-100 px-6 py-3 bg-slate-50/20 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+        <div className="col-span-2">Code</div>
+        <div className="col-span-3">Campaign Details</div>
+        <div className="col-span-2 text-center">Scope</div>
+        <div className="col-span-2 text-center">Min Order Amount</div>
+        <div className="col-span-2 text-center">Status</div>
+        <div className="col-span-1 text-right pr-4">Actions</div>
+      </div>
+      <div className="divide-y divide-slate-50 px-3 py-2 sm:p-4 space-y-2 bg-white">
+        {[1, 2, 3, 4, 5, 6].map(idx => (
+          <div key={idx} className="flex flex-col sm:grid sm:grid-cols-12 items-start sm:items-center p-3 rounded-xl border border-slate-50 gap-2.5 sm:gap-0 bg-white">
+            <div className="col-span-2 space-y-1.5"><Bone className="h-4.5 w-16" /><Bone className="h-2.5 w-10" /></div>
+            <div className="col-span-3 space-y-1.5"><Bone className="h-4 w-3/4" /><Bone className="h-3 w-1/2" /></div>
+            <div className="col-span-2 flex justify-center"><BonePill className="h-6 w-16" /></div>
+            <div className="col-span-2 flex justify-center"><Bone className="h-4 w-12" /></div>
+            <div className="col-span-2 flex justify-center"><BonePill className="h-6 w-14" /></div>
+            <div className="col-span-1 flex justify-end pr-4 space-x-1.5">
+              <Bone className="w-7 h-7 rounded-lg" />
+              <Bone className="w-7 h-7 rounded-lg" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </>
+);
+
 export const SafeImage: React.FC<{
   src: string;
   alt: string;

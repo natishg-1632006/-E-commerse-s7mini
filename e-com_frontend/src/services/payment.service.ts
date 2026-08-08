@@ -41,6 +41,21 @@ class PaymentService {
     });
     return response.data;
   }
+
+  async verifyPayment(
+    orderId: string,
+    razorpayPaymentId: string,
+    razorpayOrderId: string,
+    razorpaySignature: string
+  ): Promise<any> {
+    const response = await paymentApi.post('/api/v1/payment/verify', {
+      orderId,
+      razorpayPaymentId,
+      razorpayOrderId,
+      razorpaySignature,
+    });
+    return response.data;
+  }
 }
 
 export const paymentService = new PaymentService();

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AdminLayout } from '../../layouts/AdminLayout';
+import { AnimatedCounter } from '../../components/common/AnimatedCounter';
 import { reviewService } from '../../services/review.service';
 import type { Review } from '../../services/review.service';
 import { productService } from '../../services/product.service';
@@ -88,7 +89,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, subtitle, icon, iconB
             {title}
           </span>
           <span className={`text-xl font-black tracking-tight mt-0.5 leading-none ${highlight ? 'text-red-650' : 'text-slate-800'}`}>
-            {value}
+            <AnimatedCounter value={value} />
           </span>
           <span className="text-[9px] text-slate-455 font-bold tracking-wide mt-1 truncate">
             {subtitle}

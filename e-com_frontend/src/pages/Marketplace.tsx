@@ -1011,6 +1011,11 @@ export const Marketplace: React.FC = () => {
     return (
       <MainLayout>
         <div className="w-full flex flex-col items-stretch space-y-12 select-none">
+          {/* Search bar row (Visible on Homepage) */}
+          <div className="w-full max-w-xl mx-auto -mb-6 px-4">
+            <Search value={searchQuery} onChange={setSearchQuery} placeholder="Search for products, brands..." />
+          </div>
+
           {/* Horizontal Category Scroll Bar (Flipkart Style) */}
           <div className="w-full bg-white border-b border-slate-100/70 py-1.5 select-none sticky top-16 z-40 mt-0 lg:-mt-8 mb-4 shadow-sm/5">
             <div className="flex items-center overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] gap-2 sm:gap-4 md:gap-0 px-4 justify-start md:justify-center w-full">
@@ -1341,22 +1346,8 @@ export const Marketplace: React.FC = () => {
         
 
 
-        {/* Mobile/Tablet Filter & Search row */}
-        <div className="flex lg:hidden items-center justify-between gap-3 mb-2 sticky top-16 z-30 bg-slate-50/95 backdrop-blur-sm py-2">
-          <div className="flex-grow">
-            <Search value={searchQuery} onChange={setSearchQuery} placeholder="Search hardware..." />
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-[42px] px-3 sm:px-4 font-bold flex items-center justify-center sm:space-x-1.5 rounded-xl border-slate-200 cursor-pointer active:scale-95 bg-white text-slate-700 hover:bg-slate-50 transition-all"
-            onClick={() => setIsFilterDrawerOpen(true)}
-            aria-label="Toggle Filters"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-slate-500 flex-shrink-0" />
-            <span className="hidden sm:inline">Filters</span>
-          </Button>
-        </div>
+        {/* Spacing block */}
+        <div className="h-2" />
 
         {/* Content catalog Layout */}
         <div className="w-full grid grid-cols-1 lg:grid-cols-4 gap-8 items-start mt-8 lg:-mt-8">
@@ -1373,6 +1364,11 @@ export const Marketplace: React.FC = () => {
                     Clear All
                   </button>
                 )}
+              </div>
+
+              {/* Search filter input */}
+              <div className="mb-5">
+                <Search value={searchQuery} onChange={setSearchQuery} placeholder="Search product..." />
               </div>
               {isLoading ? renderFilterSkeleton() : renderFilters()}
             </Card>
@@ -1446,6 +1442,15 @@ export const Marketplace: React.FC = () => {
 
               {/* Sort controls */}
               <div className="flex items-center space-x-3">
+                {/* Mobile Filter Button */}
+                <button
+                  onClick={() => setIsFilterDrawerOpen(true)}
+                  className="lg:hidden h-[34px] px-2.5 sm:px-3 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-[12px] text-xs font-black transition-all flex items-center justify-center space-x-1 cursor-pointer select-none active:scale-95"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                  <span>Filters</span>
+                </button>
+
                 <div className="relative inline-block text-left" ref={sortRef}>
                   <button
                     onClick={() => setIsSortOpen(!isSortOpen)}
@@ -1635,6 +1640,11 @@ export const Marketplace: React.FC = () => {
                 Clear All
               </button>
             )}
+          </div>
+
+          {/* Search filter input */}
+          <div className="mb-5">
+            <Search value={searchQuery} onChange={setSearchQuery} placeholder="Search product..." />
           </div>
           {isLoading ? renderFilterSkeleton() : renderFilters()}
           <Button

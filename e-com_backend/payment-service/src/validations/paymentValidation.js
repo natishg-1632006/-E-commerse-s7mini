@@ -29,4 +29,12 @@ const updateStatusRules = [
   handleValidation,
 ];
 
-module.exports = { createPaymentRules, updateStatusRules };
+const verifyPaymentRules = [
+  body('orderId').trim().notEmpty().withMessage('orderId is required'),
+  body('razorpayPaymentId').trim().notEmpty().withMessage('razorpayPaymentId is required'),
+  body('razorpayOrderId').trim().notEmpty().withMessage('razorpayOrderId is required'),
+  body('razorpaySignature').trim().notEmpty().withMessage('razorpaySignature is required'),
+  handleValidation,
+];
+
+module.exports = { createPaymentRules, updateStatusRules, verifyPaymentRules };
