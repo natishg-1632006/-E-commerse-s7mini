@@ -130,11 +130,7 @@ export const Checkout: React.FC = () => {
   // Payment Method: 'card' | 'upi' | 'netbank' | 'cod'
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbank' | 'cod'>('card');
 
-  // Card fields
-  const [cardName, setCardName] = useState('');
-  const [cardNumber, setCardNumber] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
+
 
   // Random order details generated on payment completion
   const [orderId, setOrderId] = useState('');
@@ -455,19 +451,6 @@ export const Checkout: React.FC = () => {
   };
 
   const handleExistingOrderPayment = async () => {
-    if (paymentMethod === 'card') {
-      const cardErrors: Record<string, string> = {};
-      if (!cardName.trim()) cardErrors.cardName = 'Name is required';
-      if (!cardNumber.trim() || cardNumber.length < 16) cardErrors.cardNumber = 'Valid card number is required';
-      if (!cardExpiry.trim()) cardErrors.cardExpiry = 'Expiry is required';
-      if (!cardCvv.trim() || cardCvv.length < 3) cardErrors.cardCvv = 'CVV is required';
-
-      if (Object.keys(cardErrors).length > 0) {
-        setErrors((prev) => ({ ...prev, ...cardErrors }));
-        return;
-      }
-    }
-
     setIsLoading(true);
     try {
       let mappedMethod = 'Card';
@@ -510,7 +493,14 @@ export const Checkout: React.FC = () => {
         setActiveStep(4);
         toast.success('Order placed successfully! Please pay on delivery.');
       } else {
-        const payRes = await paymentService.createPayment(targetOrderId, mappedMethod);
+        const payRes = await paymentService.createRazorpayOrder(targetOrderId);
+        if (!payRes.success || !payRes.data) {
+          toast.error('Failed to initiate payment. Please try again.');
+          setPaymentPending(true);
+          setActiveStep(4);
+          return;
+        }
+
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded) {
           toast.error('Failed to load Razorpay Checkout SDK. Please try again.');
@@ -520,12 +510,12 @@ export const Checkout: React.FC = () => {
         }
 
         const options = {
-          key: payRes.razorpayKeyId,
-          amount: Math.round(payRes.amount * 100),
+          key: payRes.data.keyId,
+          amount: payRes.data.amount,
           currency: 'INR',
           name: 'Tech Store',
           description: `Payment for Order #${displayId || targetOrderId}`,
-          order_id: payRes.razorpayOrderId,
+          order_id: payRes.data.razorpayOrderId,
           handler: async function (response: any) {
             setIsLoading(true);
             try {
@@ -686,6 +676,12 @@ export const Checkout: React.FC = () => {
                 <span className="text-slate-455 font-bold">Delivery Estimate</span>
                 <span className="text-slate-800 font-black">3-5 Business Days</span>
               </div>
+              <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
+                <span className="text-slate-455 font-bold">Payment Method</span>
+                <span className="text-slate-855 font-black uppercase tracking-tight">
+                  {paymentMethod === 'cod' ? 'Cash on Delivery' : `Razorpay (${paymentMethod === 'card' ? 'Card' : paymentMethod === 'upi' ? 'UPI' : 'NetBanking'})`}
+                </span>
+              </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-slate-455 font-bold">{paymentPending ? 'Total Amount' : 'Total Paid'}</span>
                 <Price value={total} className="text-sm font-black text-slate-900" />
@@ -714,7 +710,12 @@ export const Checkout: React.FC = () => {
                         return;
                       }
 
-                      const payRes = await paymentService.createPayment(orderId, mappedMethod);
+                      const payRes = await paymentService.createRazorpayOrder(orderId);
+                      if (!payRes.success || !payRes.data) {
+                        toast.error('Failed to initiate payment. Please try again.');
+                        return;
+                      }
+
                       const scriptLoaded = await loadRazorpayScript();
                       if (!scriptLoaded) {
                         toast.error('Failed to load Razorpay Checkout SDK. Please try again.');
@@ -722,12 +723,12 @@ export const Checkout: React.FC = () => {
                       }
 
                       const options = {
-                        key: payRes.razorpayKeyId,
-                        amount: Math.round(payRes.amount * 100),
+                        key: payRes.data.keyId,
+                        amount: payRes.data.amount,
                         currency: 'INR',
                         name: 'Tech Store',
                         description: `Payment for Order #${displayId || orderId}`,
-                        order_id: payRes.razorpayOrderId,
+                        order_id: payRes.data.razorpayOrderId,
                         handler: async function (response: any) {
                           setIsPaying(true);
                           try {
@@ -1016,62 +1017,13 @@ export const Checkout: React.FC = () => {
 
                   <div className="pt-4 border-t border-slate-100">
                     {paymentMethod === 'card' && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex flex-col space-y-1.5 md:col-span-2 text-left">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Cardholder Name</label>
-                          <input
-                            type="text"
-                            value={cardName}
-                            onChange={(e) => setCardName(e.target.value)}
-                            placeholder="Rahul Sharma"
-                            className={cn(
-                              "w-full h-11 px-4 rounded-xl border bg-white text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
-                              submitted && errors.cardName ? "border-rose-450" : "border-slate-200"
-                            )}
-                          />
+                      <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-center space-y-4">
+                        <div className="w-11 h-11 bg-white rounded-full flex items-center justify-center shadow-sm border border-slate-100 text-blue-650">
+                          <CreditCard className="w-5.5 h-5.5" />
                         </div>
-
-                        <div className="flex flex-col space-y-1.5 md:col-span-2 text-left">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Card Number</label>
-                          <input
-                            type="text"
-                            value={cardNumber}
-                            onChange={(e) => setCardNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
-                            placeholder="0000 0000 0000 0000"
-                            className={cn(
-                              "w-full h-11 px-4 rounded-xl border bg-white text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
-                              submitted && errors.cardNumber ? "border-rose-450" : "border-slate-200"
-                            )}
-                          />
-                        </div>
-
-                        <div className="flex flex-col space-y-1.5 text-left">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Expiry Date (MM/YY)</label>
-                          <input
-                            type="text"
-                            value={cardExpiry}
-                            onChange={(e) => setCardExpiry(e.target.value.slice(0, 5))}
-                            placeholder="MM/YY"
-                            className={cn(
-                              "w-full h-11 px-4 rounded-xl border bg-white text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
-                              submitted && errors.cardExpiry ? "border-rose-450" : "border-slate-200"
-                            )}
-                          />
-                        </div>
-
-                        <div className="flex flex-col space-y-1.5 text-left">
-                          <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">CVV</label>
-                          <input
-                            type="password"
-                            value={cardCvv}
-                            onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, '').slice(0, 3))}
-                            placeholder="***"
-                            maxLength={3}
-                            className={cn(
-                              "w-full h-11 px-4 rounded-xl border bg-white text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all",
-                              submitted && errors.cardCvv ? "border-rose-450" : "border-slate-200"
-                            )}
-                          />
+                        <div className="space-y-1">
+                          <h3 className="text-xs font-black text-slate-850">Pay via Credit/Debit Card</h3>
+                          <p className="text-[10px] text-slate-450 font-bold">You will be prompted to enter your Card Number, Expiry, and CVV securely inside the Razorpay checkout overlay.</p>
                         </div>
                       </div>
                     )}

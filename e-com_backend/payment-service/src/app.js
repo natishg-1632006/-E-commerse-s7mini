@@ -31,7 +31,11 @@ app.use(
   })
 );
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString();
+  }
+}));
 
 app.get('/api', (req, res) => {
   res.json({

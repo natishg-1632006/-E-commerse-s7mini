@@ -2,6 +2,7 @@ const router = require('express').Router();
 const controller = require('../controllers/paymentController');
 const {
   createPaymentRules,
+  createRazorpayOrderRules,
   updateStatusRules,
   verifyPaymentRules,
 } = require('../validations/paymentValidation');
@@ -9,13 +10,22 @@ const {
 const authMiddleware = require('../middleware/authMiddleware');
 const authorize = require('../middleware/roleMiddleware');
 
-// Customer - Create Payment
+// Customer - Create Payment (Legacy / general payment creation)
 router.post(
   '/create',
   authMiddleware,
   authorize('Customer'),
   createPaymentRules,
   controller.createPayment
+);
+
+// Customer - Create Razorpay Order
+router.post(
+  '/create-order',
+  authMiddleware,
+  authorize('Customer'),
+  createRazorpayOrderRules,
+  controller.createRazorpayOrder
 );
 
 // Customer - Verify Payment (Razorpay verification)
@@ -25,6 +35,12 @@ router.post(
   authorize('Customer'),
   verifyPaymentRules,
   controller.verifyPayment
+);
+
+// Public - Razorpay Webhook Receiver
+router.post(
+  '/webhook',
+  controller.handleWebhook
 );
 
 // Customer & Admin - Get Payment by Order

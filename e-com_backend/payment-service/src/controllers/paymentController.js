@@ -3,8 +3,8 @@ const { success, error } = require('../utils/responseHandler');
 
 const createPayment = async (req, res, next) => {
   try {
-    const { orderId,paymentMethod } = req.body;
-    const userId=req.user.sub; 
+    const { orderId, paymentMethod } = req.body;
+    const userId = req.user.sub; 
     const payment = await service.createPayment(orderId, userId, paymentMethod);
     success(res, payment, 201);
   } catch (err) {
@@ -12,18 +12,39 @@ const createPayment = async (req, res, next) => {
   }
 };
 
+const createRazorpayOrder = async (req, res, next) => {
+  try {
+    const { orderId } = req.body;
+    const userId = req.user.sub;
+    const orderData = await service.createRazorpayOrder(orderId, userId);
+    success(res, orderData, 201);
+  } catch (err) {
+    next(err);
+  }
+};
+
 const verifyPayment = async (req, res, next) => {
   try {
-    const { orderId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+    const { internalOrderId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
     const userId = req.user.sub;
     const payment = await service.verifyPayment(
-      orderId,
+      internalOrderId,
       razorpayPaymentId,
       razorpayOrderId,
       razorpaySignature,
       userId
     );
     success(res, payment);
+  } catch (err) {
+    next(err);
+  }
+};
+
+const handleWebhook = async (req, res, next) => {
+  try {
+    const signature = req.headers['x-razorpay-signature'];
+    const event = await service.handleWebhook(req.rawBody, signature, req.body);
+    success(res, { received: true, event });
   } catch (err) {
     next(err);
   }
@@ -70,7 +91,9 @@ const getAllPayments = async (req, res, next) => {
 
 module.exports = {
   createPayment,
+  createRazorpayOrder,
   verifyPayment,
+  handleWebhook,
   getPayment,
   getPaymentByOrder,
   updatePaymentStatus,

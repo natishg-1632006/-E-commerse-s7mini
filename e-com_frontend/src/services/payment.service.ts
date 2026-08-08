@@ -34,6 +34,7 @@ paymentApi.interceptors.response.use(
 );
 
 class PaymentService {
+  // Legacy / COD fallback support
   async createPayment(orderId: string, paymentMethod: string): Promise<any> {
     const response = await paymentApi.post('/api/v1/payment/create', {
       orderId,
@@ -42,14 +43,23 @@ class PaymentService {
     return response.data;
   }
 
+  // Create Razorpay Order
+  async createRazorpayOrder(orderId: string): Promise<any> {
+    const response = await paymentApi.post('/api/v1/payment/create-order', {
+      orderId,
+    });
+    return response.data;
+  }
+
+  // Verify Razorpay Payment Signature
   async verifyPayment(
-    orderId: string,
+    internalOrderId: string,
     razorpayPaymentId: string,
     razorpayOrderId: string,
     razorpaySignature: string
   ): Promise<any> {
     const response = await paymentApi.post('/api/v1/payment/verify', {
-      orderId,
+      internalOrderId,
       razorpayPaymentId,
       razorpayOrderId,
       razorpaySignature,

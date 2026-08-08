@@ -29,8 +29,20 @@ describe('paymentController', () => {
     expect(next).toHaveBeenCalledWith(err);
   });
 
+  test('createRazorpayOrder success and error', async () => {
+    req.body = { orderId: 'o1' };
+    service.createRazorpayOrder.mockResolvedValue({ razorpayOrderId: 'order_rp123' });
+    await controller.createRazorpayOrder(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(201);
+
+    const err = new Error('fail');
+    service.createRazorpayOrder.mockRejectedValue(err);
+    await controller.createRazorpayOrder(req, res, next);
+    expect(next).toHaveBeenCalledWith(err);
+  });
+
   test('verifyPayment success and error', async () => {
-    req.body = { orderId: 'o1', razorpayPaymentId: 'pay_1', razorpayOrderId: 'order_1', razorpaySignature: 'sig_1' };
+    req.body = { internalOrderId: 'o1', razorpayPaymentId: 'pay_1', razorpayOrderId: 'order_1', razorpaySignature: 'sig_1' };
     service.verifyPayment.mockResolvedValue({ paymentid: 'p1' });
     await controller.verifyPayment(req, res, next);
     expect(res.status).toHaveBeenCalledWith(200);
@@ -38,6 +50,20 @@ describe('paymentController', () => {
     const err = new Error('fail');
     service.verifyPayment.mockRejectedValue(err);
     await controller.verifyPayment(req, res, next);
+    expect(next).toHaveBeenCalledWith(err);
+  });
+
+  test('handleWebhook success and error', async () => {
+    req.headers['x-razorpay-signature'] = 'sig_1';
+    req.rawBody = '{"event":"payment.captured"}';
+    req.body = { event: 'payment.captured' };
+    service.handleWebhook.mockResolvedValue({ processed: true });
+    await controller.handleWebhook(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+
+    const err = new Error('fail');
+    service.handleWebhook.mockRejectedValue(err);
+    await controller.handleWebhook(req, res, next);
     expect(next).toHaveBeenCalledWith(err);
   });
 
