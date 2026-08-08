@@ -9,6 +9,10 @@ describe('paymentService', () => {
   beforeEach(() => {
     global.docClientSendMock.mockReset();
     global.docClientSendMock.mockResolvedValue({ Items: [], Item: null });
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ id: 'order_TN9HntXyNupYUu' })
+    });
     jest.clearAllMocks();
   });
 
@@ -20,12 +24,13 @@ describe('paymentService', () => {
     snsService.publishPaymentEvent.mockResolvedValue({});
 
     const p1 = await service.createPayment('o1', 'user-123', 'UPI');
-    expect(p1.status).toBe('PAID');
-    expect(p1.transactionId).toContain('DEV-TXN-');
+    expect(p1.status).toBe('PENDING');
+    expect(p1.razorpayOrderId).toBe('order_TN9HntXyNupYUu');
 
     // COD order
     const p2 = await service.createPayment('o1', 'user-123', 'COD');
     expect(p2.transactionId).toContain('COD-');
+    expect(p2.status).toBe('PAID');
 
     // Order not found
     orderApi.getOrderById.mockResolvedValue(null);
@@ -42,6 +47,36 @@ describe('paymentService', () => {
     // Already paid order
     orderApi.getOrderById.mockResolvedValue({ ...mockOrder, paymentStatus: 'PAID' });
     await expect(service.createPayment('o1', 'user-123', 'UPI')).rejects.toThrow('Order is already paid');
+  });
+
+  test('verifyPayment handles signature validation and transitions', async () => {
+    const mockPayment = { paymentid: 'p1', orderId: 'o1', userId: 'user-123', amount: 100, status: 'PENDING', transactionId: 'order_123', razorpayOrderId: 'order_123' };
+    
+    // Valid signature
+    global.docClientSendMock
+      .mockResolvedValueOnce({ Items: [mockPayment] }) // getPaymentByOrderId
+      .mockResolvedValueOnce({ Attributes: { ...mockPayment, status: 'PAID', transactionId: 'pay_123' } }); // UpdateCommand
+
+    snsService.publishPaymentEvent.mockResolvedValue({});
+
+    const crypto = require('crypto');
+    const signature = crypto
+      .createHmac('sha256', '9QdIvQLHpl2FMW4sFOasXlYv')
+      .update('order_123|pay_123')
+      .digest('hex');
+
+    const res = await service.verifyPayment('o1', 'pay_123', 'order_123', signature, 'user-123');
+    expect(res.status).toBe('PAID');
+    expect(res.transactionId).toBe('pay_123');
+
+    // Invalid signature
+    global.docClientSendMock
+      .mockResolvedValueOnce({ Items: [mockPayment] }) // getPaymentByOrderId
+      .mockResolvedValueOnce({ Attributes: { ...mockPayment, status: 'FAILED' } }); // UpdateCommand
+
+    await expect(
+      service.verifyPayment('o1', 'pay_123', 'order_123', 'invalid-sig', 'user-123')
+    ).rejects.toThrow('Invalid payment signature');
   });
 
   test('getPaymentById and getPaymentByOrderId', async () => {

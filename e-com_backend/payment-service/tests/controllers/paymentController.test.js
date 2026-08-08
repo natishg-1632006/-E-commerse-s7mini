@@ -29,6 +29,18 @@ describe('paymentController', () => {
     expect(next).toHaveBeenCalledWith(err);
   });
 
+  test('verifyPayment success and error', async () => {
+    req.body = { orderId: 'o1', razorpayPaymentId: 'pay_1', razorpayOrderId: 'order_1', razorpaySignature: 'sig_1' };
+    service.verifyPayment.mockResolvedValue({ paymentid: 'p1' });
+    await controller.verifyPayment(req, res, next);
+    expect(res.status).toHaveBeenCalledWith(200);
+
+    const err = new Error('fail');
+    service.verifyPayment.mockRejectedValue(err);
+    await controller.verifyPayment(req, res, next);
+    expect(next).toHaveBeenCalledWith(err);
+  });
+
   test('getPayment success, 404, and error', async () => {
     req.params.id = 'p1';
     service.getPaymentById.mockResolvedValue({ paymentid: 'p1' });
