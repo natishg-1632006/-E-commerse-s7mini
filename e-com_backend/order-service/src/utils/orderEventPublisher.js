@@ -18,11 +18,11 @@ const publishOrderCreated = async (order) => {
     customerName: order.shippingAddress?.fullName,
     orderId: order.orderid,
     userId: order.userId,
+    displayId: order.displayId || null,
     items: order.items,
     paymentMethod: order.paymentMethod,
     shippingAddress: order.shippingAddress,
     totalAmount: order.totalAmount,
-
     orderStatus: order.orderStatus,
     paymentStatus: order.paymentStatus,
   };
@@ -49,10 +49,10 @@ const publishOrderConfirmed = async (order) => {
     customerName: order.shippingAddress?.fullName,
     orderId: order.orderid,
     userId: order.userId,
+    displayId: order.displayId || null,
     items: order.items,
     paymentMethod: order.paymentMethod,
     totalAmount: order.totalAmount,
-
     paymentStatus: order.paymentStatus,
     orderStatus: order.orderStatus,
   };
@@ -75,19 +75,15 @@ const publishOrderCancelled = async (order, reason = "USER_CANCELLED") => {
     eventType: "ORDER_CANCELLED",
     eventId: uuidv4(),
     timestamp: new Date().toISOString(),
-
     orderId: order.orderid,
     userId: order.userId,
-
+    displayId: order.displayId || null,
     email: order.email,
     customerName: order.shippingAddress?.fullName,
-
     totalAmount: order.totalAmount,
     items: order.items,
-
     paymentStatus: order.paymentStatus,
     orderStatus: order.orderStatus,
-
     reason,
   };
 
@@ -105,7 +101,6 @@ const publishOrderCancelled = async (order, reason = "USER_CANCELLED") => {
 };
 
 const publishOrderStatusChanged = async (order, eventType) => {
-
   console.log("========== ORDER EVENT ==========");
   console.log("Topic:", process.env.ORDER_EVENTS_TOPIC_ARN);
   console.log("Event:", eventType);
@@ -117,19 +112,14 @@ const publishOrderStatusChanged = async (order, eventType) => {
     eventType,
     eventId: uuidv4(),
     timestamp: new Date().toISOString(),
-
     orderId: order.orderid,
     userId: order.userId,
-
+    displayId: order.displayId || null,
     email: order.email,
-
     customerName: order.shippingAddress?.fullName,
-
     paymentStatus: order.paymentStatus,
     orderStatus: order.orderStatus,
-
     totalAmount: order.totalAmount,
-
     items: order.items,
   };
 

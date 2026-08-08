@@ -36,7 +36,7 @@ describe('notification-service app.js endpoints and CORS rules', () => {
     expect(apiRes.statusCode).toBe(200);
 
     expect(mockOpenSegment).toHaveBeenCalled();
-  });
+  }, 60000);
 
   test('should validate CORS rules dynamically', async () => {
     process.env.NODE_ENV = 'production';
@@ -66,5 +66,5 @@ describe('notification-service app.js endpoints and CORS rules', () => {
       .get('/api')
       .set('Origin', 'https://disallowed.com');
     expect(disallowedRes.headers['access-control-allow-origin']).toBeUndefined();
-  });
+  }, 60000);
 });

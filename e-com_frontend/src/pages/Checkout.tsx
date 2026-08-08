@@ -129,6 +129,7 @@ export const Checkout: React.FC = () => {
 
   // Payment Method: 'card' | 'upi' | 'netbank' | 'cod'
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbank' | 'cod'>('card');
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
 
 
@@ -500,6 +501,7 @@ export const Checkout: React.FC = () => {
           setActiveStep(4);
           return;
         }
+        setPaymentError(null);
 
         const scriptLoaded = await loadRazorpayScript();
         if (!scriptLoaded) {
@@ -538,6 +540,7 @@ export const Checkout: React.FC = () => {
           prefill: {
             name: fullName || '',
             contact: mobileNumber || '',
+            method: paymentMethod === 'upi' ? 'upi' : paymentMethod === 'netbank' ? 'netbanking' : 'card'
           },
           theme: {
             color: '#2563EB',
@@ -559,7 +562,9 @@ export const Checkout: React.FC = () => {
       console.error('Order/Payment submission failed:', err);
       setPaymentPending(true);
       setActiveStep(4);
-      toast('Order created, but online payment is pending. Please complete your payment.', { icon: '⚠️' });
+      const errMsg = err.response?.data?.message || err.message || 'Network Error';
+      setPaymentError(errMsg);
+      toast.error(`Payment initiation failed: ${errMsg}`);
     } finally {
       setIsLoading(false);
     }
@@ -688,6 +693,21 @@ export const Checkout: React.FC = () => {
               </div>
             </div>
 
+            {paymentPending && paymentError && (
+              <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 text-left space-y-1 animate-fadeIn">
+                <div className="flex items-center space-x-1.5 text-rose-800">
+                  <AlertTriangle className="w-4 h-4 shrink-0 stroke-[2px]" />
+                  <h4 className="text-xs font-black uppercase tracking-wider">Payment Action Blocked</h4>
+                </div>
+                <p className="text-[10px] text-rose-600 font-bold leading-relaxed font-mono">
+                  {paymentError}
+                </p>
+                <p className="text-[9px] text-slate-450 font-semibold leading-relaxed mt-1 font-sans">
+                  The API endpoint returned 404. Make sure you have deployed the payment-service update to AWS and updated environment parameters.
+                </p>
+              </div>
+            )}
+
             {paymentPending ? (
               <div className="space-y-3">
                 <Button
@@ -715,6 +735,7 @@ export const Checkout: React.FC = () => {
                         toast.error('Failed to initiate payment. Please try again.');
                         return;
                       }
+                      setPaymentError(null);
 
                       const scriptLoaded = await loadRazorpayScript();
                       if (!scriptLoaded) {
@@ -750,6 +771,7 @@ export const Checkout: React.FC = () => {
                         prefill: {
                           name: fullName || '',
                           contact: mobileNumber || '',
+                          method: paymentMethod === 'upi' ? 'upi' : paymentMethod === 'netbank' ? 'netbanking' : 'card'
                         },
                         theme: {
                           color: '#2563EB',
@@ -765,7 +787,9 @@ export const Checkout: React.FC = () => {
                       rzp.open();
                     } catch (err: any) {
                       console.error('Payment retry failed:', err);
-                      toast.error('Payment failed. Please try again or pay from My Orders.');
+                      const errMsg = err.response?.data?.message || err.message || 'Network Error';
+                      setPaymentError(errMsg);
+                      toast.error(`Payment failed: ${errMsg}`);
                     } finally {
                       setIsPaying(false);
                     }
