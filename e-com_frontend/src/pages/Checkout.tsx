@@ -130,6 +130,18 @@ export const Checkout: React.FC = () => {
   // Payment Method: 'card' | 'upi' | 'netbank' | 'cod'
   const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'netbank' | 'cod'>('card');
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [loadingStatus, setLoadingStatus] = useState<'connecting' | 'verifying' | 'processing_cod' | null>(null);
+  const [successStage, setSuccessStage] = useState<'payment' | 'delivery'>('payment');
+
+  // Automatically transition success screen from payment success to delivery dispatch after 4 seconds
+  useEffect(() => {
+    if (activeStep === 4 && !paymentPending && successStage === 'payment') {
+      const timer = setTimeout(() => {
+        setSuccessStage('delivery');
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [activeStep, paymentPending, successStage]);
 
 
 
@@ -452,7 +464,11 @@ export const Checkout: React.FC = () => {
   };
 
   const handleExistingOrderPayment = async () => {
-    setIsLoading(true);
+    if (paymentMethod === 'cod') {
+      setLoadingStatus('processing_cod');
+    } else {
+      setLoadingStatus('connecting');
+    }
     try {
       let mappedMethod = 'Card';
       if (paymentMethod === 'cod') mappedMethod = 'COD';
@@ -492,81 +508,102 @@ export const Checkout: React.FC = () => {
       if (mappedMethod === 'COD') {
         setPaymentPending(true);
         setActiveStep(4);
+        setLoadingStatus(null);
         toast.success('Order placed successfully! Please pay on delivery.');
       } else {
-        const payRes = await paymentService.createRazorpayOrder(targetOrderId);
-        if (!payRes.success || !payRes.data) {
-          toast.error('Failed to initiate payment. Please try again.');
-          setPaymentPending(true);
-          setActiveStep(4);
-          return;
-        }
-        setPaymentError(null);
-
-        const scriptLoaded = await loadRazorpayScript();
-        if (!scriptLoaded) {
-          toast.error('Failed to load Razorpay Checkout SDK. Please try again.');
-          setPaymentPending(true);
-          setActiveStep(4);
-          return;
-        }
-
-        const options = {
-          key: payRes.data.keyId,
-          amount: payRes.data.amount,
-          currency: 'INR',
-          name: 'Tech Store',
-          description: `Payment for Order #${displayId || targetOrderId}`,
-          order_id: payRes.data.razorpayOrderId,
-          handler: async function (response: any) {
-            setIsLoading(true);
-            try {
-              await paymentService.verifyPayment(
-                targetOrderId,
-                response.razorpay_payment_id,
-                response.razorpay_order_id,
-                response.razorpay_signature
-              );
-              setPaymentPending(false);
-              toast.success('Payment completed successfully!');
-            } catch (err: any) {
-              console.error('Payment verification failed:', err);
-              setPaymentPending(true);
-              toast.error('Payment verification failed. Please check with your bank.');
-            } finally {
-              setIsLoading(false);
-            }
-          },
-          prefill: {
-            name: fullName || '',
-            contact: mobileNumber || '',
-            method: paymentMethod === 'upi' ? 'upi' : paymentMethod === 'netbank' ? 'netbanking' : 'card'
-          },
-          theme: {
-            color: '#2563EB',
-          },
-          modal: {
-            ondismiss: function () {
-              setPaymentPending(true);
-              toast('Payment closed. You can retry paying anytime.', { icon: 'ℹ️' });
-            }
+        try {
+          const payRes = await paymentService.createRazorpayOrder(targetOrderId);
+          if (!payRes.success || !payRes.data) {
+            toast.error('Failed to initiate payment. Please try again.');
+            setPaymentPending(true);
+            setActiveStep(4);
+            setLoadingStatus(null);
+            return;
           }
-        };
+          setPaymentError(null);
 
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-        setPaymentPending(true);
-        setActiveStep(4);
+          const scriptLoaded = await loadRazorpayScript();
+          if (!scriptLoaded) {
+            toast.error('Failed to load Razorpay Checkout SDK. Please try again.');
+            setPaymentPending(true);
+            setActiveStep(4);
+            setLoadingStatus(null);
+            return;
+          }
+
+          const options = {
+            key: payRes.data.keyId,
+            amount: payRes.data.amount,
+            currency: 'INR',
+            name: 'Tech Store',
+            description: `Payment for Order #${displayId || targetOrderId}`,
+            order_id: payRes.data.razorpayOrderId,
+            handler: async function (response: any) {
+              setLoadingStatus('verifying');
+              setIsLoading(false);
+              try {
+                await paymentService.verifyPayment(
+                  targetOrderId,
+                  response.razorpay_payment_id,
+                  response.razorpay_order_id,
+                  response.razorpay_signature
+                );
+                setPaymentPending(false);
+                setSuccessStage('payment');
+                setActiveStep(4);
+                toast.success('Payment completed successfully!');
+                setTimeout(() => {
+                  setSuccessStage('delivery');
+                }, 4000);
+              } catch (err: any) {
+                console.error('Payment verification failed:', err);
+                setPaymentPending(true);
+                setActiveStep(4);
+                toast.error('Payment verification failed. Please check with your bank.');
+              } finally {
+                setLoadingStatus(null);
+              }
+            },
+            prefill: {
+              name: fullName || '',
+              contact: mobileNumber || '',
+              method: paymentMethod === 'upi' ? 'upi' : paymentMethod === 'netbank' ? 'netbanking' : 'card'
+            },
+            theme: {
+              color: '#2563EB',
+            },
+            modal: {
+              ondismiss: function () {
+                setLoadingStatus(null);
+                setPaymentPending(true);
+                setActiveStep(4);
+                toast('Payment closed. You can retry paying anytime.', { icon: 'ℹ️' });
+              }
+            }
+          };
+
+          const rzp = new (window as any).Razorpay(options);
+          rzp.open();
+        } catch (err: any) {
+          console.error('Order/Payment submission failed:', err);
+          setPaymentPending(true);
+          setActiveStep(4);
+          setLoadingStatus(null);
+          const errMsg = err.response?.data?.message || err.message || 'Network Error';
+          setPaymentError(errMsg);
+          toast.error(`Payment initiation failed: ${errMsg}`);
+        }
       }
     } catch (err: any) {
       console.error('Order/Payment submission failed:', err);
       setPaymentPending(true);
       setActiveStep(4);
+      setLoadingStatus(null);
       const errMsg = err.response?.data?.message || err.message || 'Network Error';
       setPaymentError(errMsg);
       toast.error(`Payment initiation failed: ${errMsg}`);
     } finally {
-      setIsLoading(false);
+      // Keep loadingStatus control specific
     }
   };
 
@@ -630,174 +667,176 @@ export const Checkout: React.FC = () => {
     );
   };
 
+  const isSuccessPage = activeStep === 4 && !paymentPending;
+
   return (
     <MainLayout>
-      <div className="w-full flex flex-col items-stretch space-y-6 select-none text-left">
+      <div
+        className={cn(
+          "w-full select-none text-left",
+          isSuccessPage
+            ? "min-h-[calc(100vh-200px)] flex items-center justify-center"
+            : "flex flex-col items-stretch space-y-6"
+        )}
+      >
         {/* Breadcrumb */}
-        <div className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-400">
-          <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
-          <ChevronRight className="w-3 h-3 text-slate-350" />
-          <Link to="/cart" className="hover:text-blue-600 transition-colors">Cart</Link>
-          <ChevronRight className="w-3 h-3 text-slate-350" />
-          <span className="text-slate-800">Checkout</span>
-        </div>
+        {!isSuccessPage && (
+          <div className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-400">
+            <Link to="/" className="hover:text-blue-600 transition-colors">Home</Link>
+            <ChevronRight className="w-3 h-3 text-slate-350" />
+            <Link to="/cart" className="hover:text-blue-600 transition-colors">Cart</Link>
+            <ChevronRight className="w-3 h-3 text-slate-350" />
+            <span className="text-slate-800">Checkout</span>
+          </div>
+        )}
 
         {/* Stepper block */}
-        {renderStepper()}
+        {!isSuccessPage && renderStepper()}
 
         {activeStep === 4 ? (
           /* Step 4: Confirmation screen */
-          <div className="max-w-xl w-full mx-auto bg-white rounded-[24px] border border-slate-200/60 p-8 md:p-12 text-center shadow-[0_8px_30px_rgb(0,0,0,0.015)] space-y-6 animate-fadeIn">
-            {paymentPending ? (
+          paymentPending ? (
+            <div className="max-w-xl w-full mx-auto bg-white rounded-[24px] border border-slate-200/60 p-8 md:p-12 text-center shadow-[0_8px_30px_rgb(0,0,0,0.015)] space-y-6 animate-fadeIn">
               <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto border border-amber-100 relative">
                 <div className="absolute inset-0 rounded-full bg-amber-500/10 animate-ping duration-1000 scale-95" />
                 <AlertTriangle className="w-10 h-10 text-amber-600 stroke-[2px]" />
               </div>
-            ) : (
-              <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border border-emerald-100 relative">
-                <div className="absolute inset-0 rounded-full bg-emerald-500/10 animate-ping duration-1000 scale-95" />
-                <Check className="w-10 h-10 text-emerald-600 stroke-[3.5px]" />
-              </div>
-            )}
 
-            <div className="space-y-2">
-              <h2 className="text-2xl font-black text-slate-855 tracking-tight">
-                {paymentPending ? 'Order Created (Payment Pending)' : 'Order Placed Successfully!'}
-              </h2>
-              <p className="text-slate-500 text-xs font-semibold leading-relaxed font-sans">
-                {paymentPending
-                  ? `Your order has been created, but payment is pending. Please complete your payment now to reserve the items, or continue to pay later from your My Orders page.`
-                  : `Thank you for shopping with NatCart. Your order details and tracking link have been sent to ${emailAddress || 'your email'}.`
-                }
-              </p>
-            </div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-slate-855 tracking-tight">
+                  Order Created (Payment Pending)
+                </h2>
+                <p className="text-slate-500 text-xs font-semibold leading-relaxed font-sans">
+                  Your order has been created, but payment is pending. Please complete your payment now to reserve the items, or continue to pay later from your My Orders page.
+                </p>
+              </div>
 
-            <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 text-left space-y-3.5">
-              <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
-                <span className="text-slate-455 font-bold">Order ID</span>
-                <span className="text-slate-800 font-black tracking-tight">{displayId || orderId}</span>
-              </div>
-              <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
-                <span className="text-slate-455 font-bold">Delivery Estimate</span>
-                <span className="text-slate-800 font-black">3-5 Business Days</span>
-              </div>
-              <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
-                <span className="text-slate-455 font-bold">Payment Method</span>
-                <span className="text-slate-855 font-black uppercase tracking-tight">
-                  {paymentMethod === 'cod' ? 'Cash on Delivery' : `Razorpay (${paymentMethod === 'card' ? 'Card' : paymentMethod === 'upi' ? 'UPI' : 'NetBanking'})`}
-                </span>
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-455 font-bold">{paymentPending ? 'Total Amount' : 'Total Paid'}</span>
-                <Price value={total} className="text-sm font-black text-slate-900" />
-              </div>
-            </div>
-
-            {paymentPending && paymentError && (
-              <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 text-left space-y-1 animate-fadeIn">
-                <div className="flex items-center space-x-1.5 text-rose-800">
-                  <AlertTriangle className="w-4 h-4 shrink-0 stroke-[2px]" />
-                  <h4 className="text-xs font-black uppercase tracking-wider">Payment Action Blocked</h4>
+              <div className="bg-slate-50 rounded-2xl p-5 border border-slate-100 text-left space-y-3.5">
+                <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
+                  <span className="text-slate-455 font-bold">Order ID</span>
+                  <span className="text-slate-800 font-black tracking-tight">{displayId || orderId}</span>
                 </div>
-                <p className="text-[10px] text-rose-600 font-bold leading-relaxed font-mono">
-                  {paymentError}
-                </p>
-                <p className="text-[9px] text-slate-450 font-semibold leading-relaxed mt-1 font-sans">
-                  The API endpoint returned 404. Make sure you have deployed the payment-service update to AWS and updated environment parameters.
-                </p>
+                <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
+                  <span className="text-slate-455 font-bold">Delivery Estimate</span>
+                  <span className="text-slate-800 font-black">3-5 Business Days</span>
+                </div>
+                <div className="flex items-center justify-between text-xs border-b border-slate-200/50 pb-2.5">
+                  <span className="text-slate-455 font-bold">Payment Method</span>
+                  <span className="text-slate-855 font-black uppercase tracking-tight">
+                    {paymentMethod === 'cod' ? 'Cash on Delivery' : `Razorpay (${paymentMethod === 'card' ? 'Card' : paymentMethod === 'upi' ? 'UPI' : 'NetBanking'})`}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-slate-455 font-bold">Total Amount</span>
+                  <Price value={total} className="text-sm font-black text-slate-900" />
+                </div>
               </div>
-            )}
 
-            {paymentPending ? (
+              {paymentError && (
+                <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 text-left space-y-1 animate-fadeIn">
+                  <div className="flex items-center space-x-1.5 text-rose-800">
+                    <AlertTriangle className="w-4 h-4 shrink-0 stroke-[2px]" />
+                    <h4 className="text-xs font-black uppercase tracking-wider">Payment Action Blocked</h4>
+                  </div>
+                  <p className="text-[10px] text-rose-600 font-bold leading-relaxed font-mono">
+                    {paymentError}
+                  </p>
+                  <p className="text-[9px] text-slate-450 font-semibold leading-relaxed mt-1 font-sans">
+                    The API endpoint returned 404. Make sure you have deployed the payment-service update to AWS and updated environment parameters.
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-3">
-                <Button
-                  variant="primary"
-                  size="lg"
-                  disabled={isPaying}
-                  className="w-full rounded-2xl font-black text-xs h-12 shadow hover:shadow-md cursor-pointer active:scale-98 transition-all flex items-center justify-center space-x-2"
-                  onClick={async () => {
-                    setIsPaying(true);
-                    try {
-                      let mappedMethod = 'Card';
-                      if (paymentMethod === 'cod') mappedMethod = 'COD';
-                      else if (paymentMethod === 'upi') mappedMethod = 'UPI';
-                      else if (paymentMethod === 'netbank') mappedMethod = 'NetBanking';
-                      
-                      if (mappedMethod === 'COD') {
-                        await paymentService.createPayment(orderId, mappedMethod);
-                        setPaymentPending(false);
-                        toast.success('Payment confirmed as COD.');
-                        return;
-                      }
+                {paymentMethod !== 'cod' && (
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    disabled={isPaying}
+                    className="w-full rounded-2xl font-black text-xs h-12 shadow hover:shadow-md cursor-pointer active:scale-98 transition-all flex items-center justify-center space-x-2"
+                    onClick={async () => {
+                      setIsPaying(true);
+                      setLoadingStatus('connecting');
+                      try {
+                        const payRes = await paymentService.createRazorpayOrder(orderId);
+                        if (!payRes.success || !payRes.data) {
+                          toast.error('Failed to initiate payment. Please try again.');
+                          setLoadingStatus(null);
+                          return;
+                        }
+                        setPaymentError(null);
 
-                      const payRes = await paymentService.createRazorpayOrder(orderId);
-                      if (!payRes.success || !payRes.data) {
-                        toast.error('Failed to initiate payment. Please try again.');
-                        return;
-                      }
-                      setPaymentError(null);
+                        const scriptLoaded = await loadRazorpayScript();
+                        if (!scriptLoaded) {
+                          toast.error('Failed to load Razorpay Checkout SDK. Please try again.');
+                          setLoadingStatus(null);
+                          return;
+                        }
 
-                      const scriptLoaded = await loadRazorpayScript();
-                      if (!scriptLoaded) {
-                        toast.error('Failed to load Razorpay Checkout SDK. Please try again.');
-                        return;
-                      }
-
-                      const options = {
-                        key: payRes.data.keyId,
-                        amount: payRes.data.amount,
-                        currency: 'INR',
-                        name: 'Tech Store',
-                        description: `Payment for Order #${displayId || orderId}`,
-                        order_id: payRes.data.razorpayOrderId,
-                        handler: async function (response: any) {
-                          setIsPaying(true);
-                          try {
-                            await paymentService.verifyPayment(
-                              orderId,
-                              response.razorpay_payment_id,
-                              response.razorpay_order_id,
-                              response.razorpay_signature
-                            );
-                            setPaymentPending(false);
-                            toast.success('Payment completed successfully!');
-                          } catch (err: any) {
-                            console.error('Payment verification failed:', err);
-                            toast.error('Payment verification failed. Please check with your bank.');
-                          } finally {
-                            setIsPaying(false);
-                          }
-                        },
-                        prefill: {
-                          name: fullName || '',
-                          contact: mobileNumber || '',
-                          method: paymentMethod === 'upi' ? 'upi' : paymentMethod === 'netbank' ? 'netbanking' : 'card'
-                        },
-                        theme: {
-                          color: '#2563EB',
-                        },
-                        modal: {
-                          ondismiss: function () {
-                            toast('Payment closed.', { icon: 'ℹ️' });
+                        const options = {
+                          key: payRes.data.keyId,
+                          amount: payRes.data.amount,
+                          currency: 'INR',
+                          name: 'Tech Store',
+                          description: `Payment for Order #${displayId || orderId}`,
+                          order_id: payRes.data.razorpayOrderId,
+                          handler: async function (response: any) {
+                            setIsPaying(true);
+                            setLoadingStatus('verifying');
+                            try {
+                              await paymentService.verifyPayment(
+                                orderId,
+                                response.razorpay_payment_id,
+                                response.razorpay_order_id,
+                                response.razorpay_signature
+                              );
+                              setPaymentPending(false);
+                              setSuccessStage('payment');
+                              toast.success('Payment completed successfully!');
+                              setTimeout(() => {
+                                setSuccessStage('delivery');
+                              }, 4000);
+                            } catch (err: any) {
+                              console.error('Payment verification failed:', err);
+                              toast.error('Payment verification failed. Please check with your bank.');
+                            } finally {
+                              setIsPaying(false);
+                              setLoadingStatus(null);
+                            }
+                          },
+                          prefill: {
+                            name: fullName || '',
+                            contact: mobileNumber || '',
+                            method: paymentMethod === 'upi' ? 'upi' : paymentMethod === 'netbank' ? 'netbanking' : 'card'
+                          },
+                          theme: {
+                            color: '#2563EB',
+                          },
+                          modal: {
+                            ondismiss: function () {
+                              setLoadingStatus(null);
+                              toast('Payment closed.', { icon: 'ℹ️' });
+                            }
                           }
                         }
-                      };
 
-                      const rzp = new (window as any).Razorpay(options);
-                      rzp.open();
-                    } catch (err: any) {
-                      console.error('Payment retry failed:', err);
-                      const errMsg = err.response?.data?.message || err.message || 'Network Error';
-                      setPaymentError(errMsg);
-                      toast.error(`Payment failed: ${errMsg}`);
-                    } finally {
-                      setIsPaying(false);
-                    }
-                  }}
-                >
-                  {isPaying ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <CreditCard className="w-4 h-4 text-white" />}
-                  <span>Pay Now</span>
-                </Button>
+                        const rzp = new (window as any).Razorpay(options);
+                        rzp.open();
+                      } catch (err: any) {
+                        console.error('Payment retry failed:', err);
+                        setLoadingStatus(null);
+                        const errMsg = err.response?.data?.message || err.message || 'Network Error';
+                        setPaymentError(errMsg);
+                        toast.error(`Payment failed: ${errMsg}`);
+                      } finally {
+                        setIsPaying(false);
+                      }
+                    }}
+                  >
+                    {isPaying ? <Loader2 className="w-4 h-4 animate-spin text-white" /> : <CreditCard className="w-4 h-4 text-white" />}
+                    <span>Pay Now</span>
+                  </Button>
+                )}
 
                 <Button
                   variant="secondary"
@@ -805,20 +844,299 @@ export const Checkout: React.FC = () => {
                   className="w-full rounded-2xl font-black text-xs h-12 border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 cursor-pointer active:scale-98 transition-all"
                   onClick={handleFinish}
                 >
-                  Pay Later &amp; Continue Shopping
+                  {paymentMethod === 'cod' ? 'Continue Shopping' : 'Pay Later & Continue Shopping'}
                 </Button>
               </div>
-            ) : (
-              <Button
-                variant="primary"
-                size="lg"
-                className="w-full rounded-2xl font-black text-xs h-12 shadow cursor-pointer active:scale-98 transition-all"
-                onClick={handleFinish}
+            </div>
+          ) : (
+            <div
+              className={cn(
+                "max-w-xl w-full mx-auto text-center relative overflow-hidden transition-all duration-1000 ease-in-out",
+                successStage === 'payment'
+                  ? "bg-white rounded-[24px] border border-slate-200/60 p-8 md:p-12 shadow-[0_8px_30px_rgb(0,0,0,0.015)] h-[420px]"
+                  : "bg-transparent border-transparent shadow-none p-4 md:p-6 h-[380px]"
+              )}
+            >
+              {/* Custom CSS Keyframe styles injected */}
+              <style>{`
+                @keyframes float1 {
+                  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+                  20% { opacity: 1; }
+                  80% { opacity: 1; }
+                  100% { transform: translate(-15px, -80px) scale(0.9); opacity: 0; }
+                }
+                @keyframes float2 {
+                  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+                  30% { opacity: 1; }
+                  80% { opacity: 1; }
+                  100% { transform: translate(20px, -95px) scale(0.8); opacity: 0; }
+                }
+                @keyframes float3 {
+                  0% { transform: translate(0, 0) scale(0.6); opacity: 0; }
+                  15% { opacity: 1; }
+                  75% { opacity: 1; }
+                  100% { transform: translate(-30px, -70px) scale(0.7); opacity: 0; }
+                }
+                @keyframes phoneScale {
+                  0% { transform: translateY(80px); opacity: 0; }
+                  60% { transform: translateY(-5px); opacity: 1; }
+                  100% { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes cardSlide {
+                  0% { transform: translate(-40px, 40px) rotate(-30deg); opacity: 0; }
+                  100% { transform: translate(0, 0) rotate(-12deg); opacity: 1; }
+                }
+                @keyframes truckMove {
+                  0% { transform: translateX(-240px); }
+                  20% { transform: translateX(50px); }
+                  55% { transform: translateX(50px); }
+                  75% { transform: translateX(380px); }
+                  100% { transform: translateX(380px); }
+                }
+                @keyframes spinWheel {
+                  0% { transform: rotate(0deg); }
+                  20% { transform: rotate(360deg); }
+                  20.01% { transform: rotate(0deg); }
+                  55% { transform: rotate(0deg); }
+                  75% { transform: rotate(720deg); }
+                  75.01% { transform: rotate(0deg); }
+                  100% { transform: rotate(0deg); }
+                }
+                @keyframes packageLoad {
+                  0% { transform: translateY(-100px) scale(1.1); opacity: 0; }
+                  20% { transform: translateY(-100px) scale(1.1); opacity: 0; }
+                  25% { transform: translateY(-100px) scale(1.1); opacity: 1; }
+                  35% { transform: translateY(74px) scale(0.8); opacity: 1; }
+                  40% { transform: translateY(66px) scale(0.8); opacity: 1; }
+                  45% { transform: translateY(74px) scale(0.8); opacity: 1; }
+                  55% { transform: translateY(74px) scale(0.8); opacity: 1; }
+                  75% { transform: translateY(74px) scale(0.8); opacity: 1; }
+                  75.01% { transform: translateY(-100px) scale(1.1); opacity: 0; }
+                  100% { transform: translateY(-100px) scale(1.1); opacity: 0; }
+                }
+                .animate-floatCoins1 {
+                  animation: float1 3.5s infinite linear;
+                }
+                .animate-floatCoins2 {
+                  animation: float2 3.5s infinite linear;
+                }
+                .animate-floatCoins3 {
+                  animation: float3 3.5s infinite linear;
+                }
+                .animate-phoneScale {
+                  animation: phoneScale 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                }
+                .animate-cardSlide {
+                  animation: cardSlide 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.2s forwards;
+                  opacity: 0;
+                }
+                .animate-truckMove {
+                  animation: truckMove 6s infinite cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .animate-spinWheel {
+                  animation: spinWheel 6s infinite linear;
+                  transform-origin: center;
+                  transform-box: fill-box;
+                }
+                .animate-packageLoad {
+                  animation: packageLoad 6s infinite cubic-bezier(0.25, 1, 0.5, 1);
+                  transform-origin: center;
+                }
+              `}</style>
+
+              {/* Slide 1: PAYMENT SUCCESS VIEW */}
+              <div
+                className={cn(
+                  "absolute inset-0 p-8 md:p-12 flex flex-col items-center justify-center space-y-6 transition-all duration-1000 ease-in-out transform",
+                  successStage === 'payment' ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+                )}
               >
-                Continue Shopping
-              </Button>
-            )}
-          </div>
+                {/* Faint "Thank You!" backdrop text */}
+                <div className="absolute inset-x-0 top-1/3 -translate-y-1/2 flex items-center justify-center pointer-events-none select-none z-0">
+                  <span className="text-slate-100/50 text-7xl md:text-8xl font-black uppercase tracking-widest font-sans">
+                    Thank You !
+                  </span>
+                </div>
+
+                {/* Payment Success Phone Animation container */}
+                <div className="relative w-44 h-44 mx-auto z-10">
+                  <svg viewBox="0 0 200 200" className="w-full h-full">
+                    {/* Gold backdrop circle */}
+                    <circle cx="140" cy="110" r="45" fill="url(#goldGrad)" opacity="0.3" stroke="#F59E0B" strokeWidth="1.5" />
+                    
+                    {/* Credit Card */}
+                    <g transform="translate(45, 95) rotate(-12)" className="animate-cardSlide">
+                      <rect width="70" height="42" rx="4" fill="#E11D48" />
+                      <rect y="8" width="70" height="8" fill="#9F1239" />
+                      <rect x="6" y="22" width="16" height="10" rx="1" fill="#FDA4AF" />
+                      <circle cx="50" cy="27" r="6" fill="#FDA4AF" opacity="0.8" />
+                      <circle cx="56" cy="27" r="6" fill="#FFF1F2" opacity="0.8" />
+                    </g>
+
+                    {/* Hand holding phone */}
+                    <g className="animate-phoneScale">
+                      {/* Wrist */}
+                      <path d="M 85,190 L 105,190 L 105,150 L 85,150 Z" fill="#FDBA74" />
+                      {/* Sleeve */}
+                      <rect x="78" y="165" width="34" height="20" fill="#1D4ED8" rx="2" />
+                      
+                      {/* Phone Body */}
+                      <rect x="75" y="70" width="50" height="90" rx="8" fill="#0F172A" stroke="#475569" strokeWidth="3" />
+                      {/* Phone Screen */}
+                      <rect x="78" y="75" width="44" height="80" rx="5" fill="#10B981" />
+                      {/* Checkmark on Screen */}
+                      <path d="M 90,115 L 97,122 L 110,108" fill="none" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+                      <circle cx="100" cy="85" r="3" fill="#FFFFFF" />
+                      
+                      {/* Hand fingers */}
+                      {/* Thumb */}
+                      <path d="M 70,120 Q 80,120 80,128" stroke="#FDBA74" strokeWidth="7" strokeLinecap="round" fill="none" />
+                      {/* Fingers on other side */}
+                      <path d="M 125,95 Q 120,95 120,102" stroke="#FDBA74" strokeWidth="6" strokeLinecap="round" fill="none" />
+                      <path d="M 125,108 Q 120,108 120,115" stroke="#FDBA74" strokeWidth="6" strokeLinecap="round" fill="none" />
+                      <path d="M 125,121 Q 120,121 120,128" stroke="#FDBA74" strokeWidth="6" strokeLinecap="round" fill="none" />
+                    </g>
+
+                    {/* Gold coins floating up */}
+                    <g className="animate-floatCoins1">
+                      <circle cx="100" cy="120" r="10" fill="url(#coinGrad)" stroke="#D97706" strokeWidth="1" />
+                      <text x="100" y="124" fill="#78350F" fontSize="11" fontWeight="bold" textAnchor="middle">$</text>
+                    </g>
+                    <g className="animate-floatCoins2">
+                      <circle cx="120" cy="110" r="8" fill="url(#coinGrad)" stroke="#D97706" strokeWidth="1" />
+                      <text x="120" y="113" fill="#78350F" fontSize="9" fontWeight="bold" textAnchor="middle">$</text>
+                    </g>
+                    <g className="animate-floatCoins3">
+                      <circle cx="80" cy="130" r="7" fill="url(#coinGrad)" stroke="#D97706" strokeWidth="1" />
+                      <text x="80" y="133" fill="#78350F" fontSize="8" fontWeight="bold" textAnchor="middle">$</text>
+                    </g>
+
+                    {/* Gradients */}
+                    <defs>
+                      <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#FBBF24" />
+                        <stop offset="100%" stopColor="#D97706" />
+                      </linearGradient>
+                      <linearGradient id="coinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#FDE047" />
+                        <stop offset="100%" stopColor="#CA8A04" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+
+                {/* Success Messages */}
+                <div className="space-y-2 z-10 relative">
+                  <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight leading-tight">
+                    Your Payment is Successful
+                  </h2>
+                  <p className="text-slate-500 text-xs font-semibold leading-relaxed max-w-md mx-auto font-sans">
+                    Thank you for your payment. An automated payment receipt will be sent to your registered email.
+                  </p>
+                </div>
+              </div>
+
+              {/* Slide 2: DELIVERY PACKING VIEW */}
+              <div
+                className={cn(
+                  "absolute inset-0 p-4 md:p-6 flex flex-col items-center justify-center space-y-4 transition-all duration-1000 ease-in-out transform",
+                  successStage === 'delivery' ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+                )}
+              >
+                {/* Faint "On The Way!" backdrop text */}
+                <div className="absolute inset-x-0 top-1/3 -translate-y-1/2 flex items-center justify-center pointer-events-none select-none z-0">
+                  <span className="text-slate-100/40 text-6xl md:text-7xl font-black uppercase tracking-widest font-sans">
+                    On The Way !
+                  </span>
+                </div>
+
+                {/* Custom Delivery Transit SVG Animation - Borderless road */}
+                <div className="w-full max-w-md mx-auto h-28 flex items-center justify-center z-10">
+                  <svg viewBox="0 0 400 120" className="w-full h-full overflow-visible">
+                    {/* Dashed road lane lines */}
+                    <line x1="0" y1="102" x2="400" y2="102" stroke="#CBD5E1" strokeWidth="2" strokeDasharray="6,6" />
+                    
+                    {/* Animated Truck container */}
+                    <g className="animate-truckMove">
+                      {/* 1. Truck Chassis base line */}
+                      <rect x="68" y="90" width="162" height="6" fill="#1E2937" rx="1" />
+                      
+                      {/* 2. Cargo container interior back wall */}
+                      <rect x="70" y="38" width="105" height="54" rx="3" fill="#1E293B" />
+
+                      {/* 3. Cardboard Box Package (drops vertically inside the truck) */}
+                      <g transform="translate(122, 0)">
+                        <g className="animate-packageLoad">
+                          <rect x="-12" y="-12" width="24" height="24" rx="2" fill="#D97706" stroke="#B45309" strokeWidth="1" />
+                          <rect x="-2.5" y="-12" width="5" height="24" fill="#78350F" />
+                          <rect x="2" y="-6" width="6" height="5" fill="#FFFFFF" rx="0.5" />
+                        </g>
+                      </g>
+                      
+                      {/* 4. Cargo container front panel side wall (covers package bottom) */}
+                      <path d="M 70,38 L 70,92 L 175,92 L 175,38 L 165,38 L 165,82 L 80,82 L 80,38 Z" fill="#E2E8F0" stroke="#94A3B8" strokeWidth="2" />
+                      {/* Cargo Container lines */}
+                      <line x1="105" y1="82" x2="105" y2="92" stroke="#CBD5E1" strokeWidth="1.5" />
+                      <line x1="140" y1="82" x2="140" y2="92" stroke="#CBD5E1" strokeWidth="1.5" />
+                      <rect x="68" y="44" width="4" height="42" fill="#475569" rx="1" />
+                      
+                      {/* 5. Cabin body */}
+                      <path d="M 175,48 L 210,48 Q 220,48 224,55 L 235,70 Q 238,74 238,80 L 238,92 L 175,92 Z" fill="#2563EB" />
+                      {/* Cabin Window */}
+                      <path d="M 180,53 L 206,53 L 222,72 L 180,72 Z" fill="#93C5FD" opacity="0.8" />
+                      {/* Headlight */}
+                      <circle cx="234" cy="82" r="3.5" fill="#FBBF24" />
+                      {/* Front Bumper */}
+                      <rect x="230" y="88" width="10" height="5" rx="2.5" fill="#475569" />
+
+                      {/* 6. Rotating Wheel 1 (Rear) */}
+                      <g transform="translate(105, 96)">
+                        <g className="animate-spinWheel">
+                          <circle cx="0" cy="0" r="12" fill="#1F2937" />
+                          <circle cx="0" cy="0" r="5" fill="#9CA3AF" />
+                          <line x1="-12" y1="0" x2="12" y2="0" stroke="#4B5563" strokeWidth="2" />
+                          <line x1="0" y1="-12" x2="0" y2="12" stroke="#4B5563" strokeWidth="2" />
+                        </g>
+                      </g>
+
+                      {/* Rotating Wheel 2 (Front) */}
+                      <g transform="translate(195, 96)">
+                        <g className="animate-spinWheel">
+                          <circle cx="0" cy="0" r="12" fill="#1F2937" />
+                          <circle cx="0" cy="0" r="5" fill="#9CA3AF" />
+                          <line x1="-12" y1="0" x2="12" y2="0" stroke="#4B5563" strokeWidth="2" />
+                          <line x1="0" y1="-12" x2="0" y2="12" stroke="#4B5563" strokeWidth="2" />
+                        </g>
+                      </g>
+                    </g>
+                  </svg>
+                </div>
+
+                {/* Dispatch Messages */}
+                <div className="space-y-2 z-10 relative">
+                  <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight leading-tight">
+                    Order Dispatched &amp; On Its Way
+                  </h2>
+                  <p className="text-slate-500 text-xs font-semibold leading-relaxed max-w-md mx-auto font-sans">
+                    Your items have been packed and handed over to our courier partner. You will receive real-time updates as the shipment travels to you.
+                  </p>
+                </div>
+
+                {/* Back to Home / Continue Shopping Button */}
+                <div className="pt-2 z-10 relative w-full flex justify-center">
+                  <Link to="/" onClick={handleFinish} className="w-full max-w-xs">
+                    <Button
+                      variant="primary"
+                      size="lg"
+                      className="w-full rounded-full font-black text-xs h-12 shadow hover:shadow-md cursor-pointer active:scale-98 transition-all flex items-center justify-center space-x-2 animate-bounce"
+                    >
+                      <span>Continue Shopping</span>
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )
         ) : (
           /* Step 2 & 3 layouts */
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-start">
@@ -1287,6 +1605,52 @@ export const Checkout: React.FC = () => {
           </div>
         )}
       </div>
+      {loadingStatus !== null && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center space-y-6 shadow-2xl border border-slate-100 transform scale-100 transition-all duration-300">
+            <div className="relative w-20 h-20 mx-auto">
+              <div className="absolute inset-0 rounded-full border-4 border-blue-500/10" />
+              <div className="absolute inset-0 rounded-full border-4 border-blue-600 border-t-transparent animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center text-blue-600">
+                {loadingStatus === 'processing_cod' ? (
+                  <Truck className="w-8 h-8" />
+                ) : (
+                  <ShieldCheck className="w-8 h-8" />
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                {loadingStatus === 'processing_cod'
+                  ? 'Processing COD Order'
+                  : (loadingStatus === 'connecting' ? 'Connecting to Gateway' : 'Verifying Secure Payment')
+                }
+              </h3>
+              <p className="text-xs text-slate-500 font-bold leading-relaxed">
+                {loadingStatus === 'processing_cod'
+                  ? 'We are setting up your cash on delivery order details. Please do not refresh or close this window.'
+                  : (loadingStatus === 'connecting'
+                    ? 'We are launching Razorpay secure checkout. Please do not refresh or close this window.'
+                    : 'Please wait while we confirm your transaction with the bank. Do not refresh or go back.')
+                }
+              </p>
+            </div>
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-center space-x-1.5 text-[10px] text-slate-400 font-bold">
+              {loadingStatus === 'processing_cod' ? (
+                <>
+                  <Truck className="w-3.5 h-3.5" />
+                  <span>Cash on Delivery Order</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>PCI-DSS Secure Payment</span>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </MainLayout>
   );
 };
