@@ -5,7 +5,7 @@ import { categoryService } from './category.service';
 import { inventoryService } from './inventory.service';
 import { couponService } from './coupon.service';
 
-const DEDICATED_ANALYTICS_URL = import.meta.env.VITE_ANALYTICS_API_URL || null;
+const DEDICATED_ANALYTICS_URL = import.meta.env.VITE_ANALYTICS_API_BASE_URL || import.meta.env.VITE_ANALYTICS_API_URL || 'https://ackp4rtrql.execute-api.ap-south-2.amazonaws.com';
 
 const analyticsApi = DEDICATED_ANALYTICS_URL
   ? axios.create({ baseURL: DEDICATED_ANALYTICS_URL, timeout: 5000 })

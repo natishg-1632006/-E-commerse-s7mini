@@ -16,7 +16,7 @@ export const FALLBACK_PRODUCT_IMAGES = {
   default: guideImg,
 };
 
-const CLOUDFRONT_DOMAIN = 'https://d222r50ryi3b71.cloudfront.net';
+const CLOUDFRONT_DOMAIN = import.meta.env.VITE_CLOUDFRONT_DOMAIN || 'https://d2c24kno5aj17g.cloudfront.net';
 
 /**
  * Safely extracts a valid image URL from any product, category, or item object.
@@ -67,6 +67,12 @@ export const getImageUrl = (item: any): string => {
   // Rewrite candidate URL to CloudFront HTTPS endpoint if applicable
   if (candidateUrl) {
     // Convert direct S3 URLs to CloudFront domain path
+    if (candidateUrl.includes('s3.ap-south-2.amazonaws.com/')) {
+      const parts = candidateUrl.split('s3.ap-south-2.amazonaws.com/');
+      const keyPath = parts[1];
+      return `${CLOUDFRONT_DOMAIN}/${keyPath}`;
+    }
+
     if (candidateUrl.includes('s3.ap-southeast-1.amazonaws.com/')) {
       const parts = candidateUrl.split('s3.ap-southeast-1.amazonaws.com/');
       const keyPath = parts[1];

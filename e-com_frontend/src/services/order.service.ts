@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const ORDER_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://ptmx1zxx9i.execute-api.ap-southeast-1.amazonaws.com';
+const ORDER_API_BASE_URL = import.meta.env.VITE_ORDER_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'https://2z7vb3e1qd.execute-api.ap-south-2.amazonaws.com';
 
 const getAuthToken = () => {
   return localStorage.getItem('natcart_access_token') || localStorage.getItem('natcart_token');
