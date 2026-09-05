@@ -187,7 +187,7 @@ const buildPremiumEmail = (title, message, isCancellation = false) => {
                     <!-- Action Button -->
                     <tr>
                       <td style="text-align: center; padding-top: 8px;">
-                        <a href="https://d222r50ryi3b71.cloudfront.net/orders" style="display: inline-block; padding: 14px 28px; background-color: #2563EB; color: #FFFFFF; font-size: 12px; font-weight: 900; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.15); text-transform: uppercase; letter-spacing: 0.5px; transition: background-color 0.2s;">
+                        <a href="https://d2c24kno5aj17g.cloudfront.net/orders" style="display: inline-block; padding: 14px 28px; background-color: #2563EB; color: #FFFFFF; font-size: 12px; font-weight: 900; text-decoration: none; border-radius: 12px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.15); text-transform: uppercase; letter-spacing: 0.5px; transition: background-color 0.2s;">
                           Track Your Order
                         </a>
                       </td>
@@ -246,7 +246,7 @@ ${isCancellation ? `Cancellation Reason: ${message.reason || "Cancelled by custo
 ${items.length > 0 ? `Items Ordered:\n${itemsText}\n` : ''}
 ${addressText}
 
-Track your order details here: https://d222r50ryi3b71.cloudfront.net/orders
+Track your order details here: https://d2c24kno5aj17g.cloudfront.net/orders
 
 Thank you for shopping with us!
 NatCart Tech Store

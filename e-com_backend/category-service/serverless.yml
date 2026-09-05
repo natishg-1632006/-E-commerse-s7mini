@@ -11,6 +11,9 @@ provider:
   region: ${env:AWS_REGION, 'ap-south-2'}
   stage: dev
 
+  httpApi:
+    cors: true
+
   environment:
     NODE_ENV: production
     DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME, 'natish_categories'}

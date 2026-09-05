@@ -22,13 +22,17 @@ app.use(helmet());
 
 // Enable CORS
 // Coupon CORS config
-const couponOrigins = ['https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173'];
+const couponOrigins = ['https://d2c24kno5aj17g.cloudfront.net', 'https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173'];
 app.use(
   cors({
     origin: (origin, cb) => {
-      const isOk = !origin || couponOrigins.indexOf(origin) !== -1 || (process.env.ALLOWED_ORIGINS && process.env.ALLOWED_ORIGINS.split(',').includes(origin));
+      const isCloudfront = origin && origin.endsWith('.cloudfront.net');
+      const isOk = !origin || isCloudfront || couponOrigins.indexOf(origin) !== -1 || (process.env.ALLOWED_ORIGINS && process.env.ALLOWED_ORIGINS.split(',').includes(origin));
       cb(null, isOk);
-    }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token', 'X-Amz-User-Agent']
   })
 );
 

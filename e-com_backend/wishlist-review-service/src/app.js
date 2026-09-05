@@ -21,13 +21,17 @@ app.get('/health', (req, res) => {
 app.use(helmet());
 app.use(compression());
 // Wishlist CORS config
-const wishlistOrigins = ['https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173'];
+const wishlistOrigins = ['https://d2c24kno5aj17g.cloudfront.net', 'https://d222r50ryi3b71.cloudfront.net', 'http://localhost:3000', 'http://localhost:5173'];
 app.use(
   cors({
     origin: (origin, done) => {
-      const isAllowed = !origin || wishlistOrigins.indexOf(origin) !== -1 || (process.env.ALLOWED_ORIGINS && process.env.ALLOWED_ORIGINS.split(',').includes(origin));
+      const isCloudfront = origin && origin.endsWith('.cloudfront.net');
+      const isAllowed = !origin || isCloudfront || wishlistOrigins.indexOf(origin) !== -1 || (process.env.ALLOWED_ORIGINS && process.env.ALLOWED_ORIGINS.split(',').includes(origin));
       done(null, isAllowed);
-    }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Amz-Date', 'X-Api-Key', 'X-Amz-Security-Token', 'X-Amz-User-Agent']
   })
 );
 app.use(morgan('dev'));
