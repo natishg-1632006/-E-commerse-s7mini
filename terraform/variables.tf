@@ -2,11 +2,11 @@
 # Input Variables for Natish E-Commerce Infrastructure
 # ==============================================================================
 
-# AWS deployment region (Default: ap-southeast-1)
+# AWS deployment region (Default: ap-south-2)
 variable "aws_region" {
   description = "AWS target region for all infrastructure resources"
   type        = string
-  default     = "ap-southeast-1"
+  default     = "ap-south-2"
 }
 
 # Target environment identifier (e.g., prod, dev, staging)

@@ -7,16 +7,12 @@ provider:
     lambda: true
     apiGateway: true
   name: aws
-  runtime: nodejs22.x
-  region: ap-southeast-1
+  runtime: nodejs20.x
+  region: ${env:AWS_REGION, 'ap-south-2'}
   stage: dev
-
-  profile: Natish
 
   environment:
     NODE_ENV: production
-    SERVICE_NAME: ${env:SERVICE_NAME}
-    AWS_REGION: ${env:AWS_REGION}
     SMTP_HOST: ${env:SMTP_HOST}
     SMTP_PORT: ${env:SMTP_PORT}
     SMTP_SECURE: ${env:SMTP_SECURE}

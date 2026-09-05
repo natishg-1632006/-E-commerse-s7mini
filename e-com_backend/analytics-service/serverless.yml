@@ -7,16 +7,12 @@ provider:
     lambda: true
     apiGateway: true
   name: aws
-  runtime: nodejs22.x
-  region: ap-southeast-1
+  runtime: nodejs20.x
+  region: ${env:AWS_REGION, 'ap-south-2'}
   stage: dev
-
-  profile: Natish   # Replace with your AWS CLI SSO profile name
 
   environment:
     NODE_ENV: production
-    SERVICE_NAME: ${env:SERVICE_NAME}
-    AWS_REGION: ${env:AWS_REGION}
     COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
     COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
     INTERNAL_SERVICE_KEY: ${env:INTERNAL_SERVICE_KEY}

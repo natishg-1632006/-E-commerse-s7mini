@@ -54,3 +54,27 @@ output "cloudwatch_dashboard_name" {
   description = "Unified CloudWatch Dashboard name visualizing microservice metrics"
   value       = module.cloudwatch.dashboard_name
 }
+
+output "deployment_user_name" {
+  description = "Name of created IAM deployment user"
+  value       = module.iam.user_name
+}
+
+output "deployment_user_access_key_id" {
+  description = "Access Key ID for IAM deployment user"
+  value       = module.iam.access_key_id
+}
+
+output "deployment_user_secret_access_key" {
+  description = "Secret Access Key for IAM deployment user"
+  value       = module.iam.secret_access_key
+  sensitive   = true
+}
+
+output "deployment_user_password" {
+  description = "Console Login Password for IAM deployment user"
+  value       = module.iam.console_password
+  sensitive   = true
+}
+
+

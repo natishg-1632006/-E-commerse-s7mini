@@ -7,11 +7,10 @@ provider:
     lambda: true
     apiGateway: true
   name: aws
-  runtime: nodejs22.x
-  region: ${env:AWS_REGION, 'ap-southeast-1'}
+  runtime: nodejs20.x
+  region: ${env:AWS_REGION, 'ap-south-2'}
   stage: ${env:STAGE, 'dev'}
   environment:
-    AWS_REGION: ${env:AWS_REGION, 'ap-southeast-1'}
     COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
     DEFAULT_GROUP: ${env:DEFAULT_GROUP, 'Customer'}
     LOG_LEVEL: ${env:LOG_LEVEL, 'INFO'}

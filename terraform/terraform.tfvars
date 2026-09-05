@@ -1,4 +1,4 @@
-aws_region           = "ap-southeast-1"
+aws_region           = "ap-south-2"
 environment          = "prod"
 project_name         = "natish"
-frontend_bucket_name = "natish-frontend"
+frontend_bucket_name = "natish-frontend-193615226126"

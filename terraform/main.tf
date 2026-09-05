@@ -69,3 +69,11 @@ module "cloudwatch" {
   environment  = var.environment
   aws_region   = var.aws_region
 }
+
+# 7. IAM Deployment User Module: Provisions deployment IAM user and programmatic access keys
+module "iam" {
+  source       = "./modules/iam"
+  project_name = var.project_name
+  environment  = var.environment
+}
+

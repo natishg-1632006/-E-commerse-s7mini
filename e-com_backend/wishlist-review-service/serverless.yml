@@ -7,16 +7,12 @@ provider:
     lambda: true
     apiGateway: true
   name: aws
-  runtime: nodejs22.x
-  region: ap-southeast-1
+  runtime: nodejs20.x
+  region: ${env:AWS_REGION, 'ap-south-2'}
   stage: dev
-
-  profile: Natish   # Matches the project AWS SSO profile name
 
   environment:
     NODE_ENV: production
-    SERVICE_NAME: ${env:SERVICE_NAME}
-    AWS_REGION: ${env:AWS_REGION}
     DYNAMODB_WISHLISTS_TABLE: ${env:DYNAMODB_WISHLISTS_TABLE}
     DYNAMODB_REVIEWS_TABLE: ${env:DYNAMODB_REVIEWS_TABLE}
     DYNAMODB_BRANDS_TABLE: ${env:DYNAMODB_BRANDS_TABLE}
