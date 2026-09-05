@@ -13,12 +13,12 @@ provider:
 
   environment:
     NODE_ENV: production
-    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
-    ORDERS_TABLE_NAME: ${env:ORDERS_TABLE_NAME}
-    PAYMENT_EVENTS_TOPIC_ARN: ${env:PAYMENT_EVENTS_TOPIC_ARN}
-    RAZORPAY_KEY_ID: ${env:RAZORPAY_KEY_ID}
-    RAZORPAY_KEY_SECRET: ${env:RAZORPAY_KEY_SECRET}
-    RAZORPAY_WEBHOOK_SECRET: ${env:RAZORPAY_WEBHOOK_SECRET}
+    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME, 'natish_payment'}
+    ORDERS_TABLE_NAME: ${env:ORDERS_TABLE_NAME, 'natish_orders'}
+    PAYMENT_EVENTS_TOPIC_ARN: ${env:PAYMENT_EVENTS_TOPIC_ARN, 'arn:aws:sns:ap-south-2:193615226126:natish-payment-events'}
+    RAZORPAY_KEY_ID: ${env:RAZORPAY_KEY_ID, ''}
+    RAZORPAY_KEY_SECRET: ${env:RAZORPAY_KEY_SECRET, ''}
+    RAZORPAY_WEBHOOK_SECRET: ${env:RAZORPAY_WEBHOOK_SECRET, ''}
 
   iam:
     role:
@@ -31,21 +31,21 @@ provider:
             - dynamodb:Scan
             - dynamodb:Query
           Resource:
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_TABLE_NAME}
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_TABLE_NAME}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_payment'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_payment'}/index/*
         - Effect: Allow
           Action:
             - dynamodb:GetItem
             - dynamodb:Scan
             - dynamodb:Query
           Resource:
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:ORDERS_TABLE_NAME}
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:ORDERS_TABLE_NAME}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:ORDERS_TABLE_NAME, 'natish_orders'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:ORDERS_TABLE_NAME, 'natish_orders'}/index/*
         - Effect: Allow
           Action:
             - sns:Publish
           Resource:
-            - ${env:PAYMENT_EVENTS_TOPIC_ARN}
+            - ${env:PAYMENT_EVENTS_TOPIC_ARN, 'arn:aws:sns:ap-south-2:193615226126:natish-payment-events'}
 
 functions:
   app:
@@ -61,20 +61,3 @@ functions:
       - httpApi:
           path: /
           method: ANY
-resources:
-  Resources:
-    PaymentTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: natish_payment
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: paymentid
-            AttributeType: S
-        KeySchema:
-          - AttributeName: paymentid
-            KeyType: HASH
-    PaymentEventsTopic:
-      Type: AWS::SNS::Topic
-      Properties:
-        TopicName: natish-payment-events

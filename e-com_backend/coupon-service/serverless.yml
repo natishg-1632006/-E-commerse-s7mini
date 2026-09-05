@@ -1,4 +1,4 @@
-service: product-service
+service: coupon-service
 
 frameworkVersion: "3"
 
@@ -13,7 +13,22 @@ provider:
 
   environment:
     NODE_ENV: production
-    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
+    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME, 'natish_coupons'}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+            - dynamodb:Query
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_coupons'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_coupons'}/index/*
 
 functions:
   app:
@@ -29,16 +44,3 @@ functions:
       - httpApi:
           path: /
           method: ANY
-resources:
-  Resources:
-    CouponsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: natish_coupons
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: couponCode
-            AttributeType: S
-        KeySchema:
-          - AttributeName: couponCode
-            KeyType: HASH

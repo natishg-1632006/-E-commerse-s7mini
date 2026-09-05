@@ -1,4 +1,4 @@
-service: product-service
+service: cart-service
 
 frameworkVersion: "3"
 
@@ -13,7 +13,7 @@ provider:
 
   environment:
     NODE_ENV: production
-    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME, 'natish_products'}
+    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME, 'natish_cart'}
 
   iam:
     role:
@@ -27,8 +27,8 @@ provider:
             - dynamodb:Scan
             - dynamodb:Query
           Resource:
-            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_products'}
-            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_products'}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_cart'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_cart'}/index/*
 
 functions:
   app:

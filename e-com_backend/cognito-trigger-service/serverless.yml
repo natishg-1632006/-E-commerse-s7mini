@@ -11,7 +11,7 @@ provider:
   region: ${env:AWS_REGION, 'ap-south-2'}
   stage: ${env:STAGE, 'dev'}
   environment:
-    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID, 'ap-south-2_AekUQ0VVq'}
     DEFAULT_GROUP: ${env:DEFAULT_GROUP, 'Customer'}
     LOG_LEVEL: ${env:LOG_LEVEL, 'INFO'}
   iam:
@@ -21,7 +21,7 @@ provider:
           Action:
             - cognito-idp:AdminAddUserToGroup
           Resource:
-            - arn:aws:cognito-idp:${self:provider.region}:*:userpool/${env:COGNITO_USER_POOL_ID}
+            - arn:aws:cognito-idp:${self:provider.region}:*:userpool/${env:COGNITO_USER_POOL_ID, 'ap-south-2_AekUQ0VVq'}
 
 functions:
   postConfirmationTrigger:

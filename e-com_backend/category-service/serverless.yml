@@ -1,4 +1,4 @@
-service: product-service
+service: category-service
 
 frameworkVersion: "3"
 
@@ -13,7 +13,22 @@ provider:
 
   environment:
     NODE_ENV: production
-    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
+    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME, 'natish_categories'}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - dynamodb:GetItem
+            - dynamodb:PutItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Scan
+            - dynamodb:Query
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_categories'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_categories'}/index/*
 
 functions:
   app:
@@ -29,24 +44,3 @@ functions:
       - httpApi:
           path: /
           method: ANY
-resources:
-  Resources:
-    CategoriesTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: natish_categories
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: categoryId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: categoryId
-            KeyType: HASH
-    CategoryEventsTopic:
-      Type: AWS::SNS::Topic
-      Properties:
-        TopicName: natish-category-events
-    ProductCategoryQueue:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: natish-product-category-events

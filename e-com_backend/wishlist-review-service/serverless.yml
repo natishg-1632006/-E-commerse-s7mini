@@ -13,12 +13,12 @@ provider:
 
   environment:
     NODE_ENV: production
-    DYNAMODB_WISHLISTS_TABLE: ${env:DYNAMODB_WISHLISTS_TABLE}
-    DYNAMODB_REVIEWS_TABLE: ${env:DYNAMODB_REVIEWS_TABLE}
-    DYNAMODB_BRANDS_TABLE: ${env:DYNAMODB_BRANDS_TABLE}
-    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
-    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
-    ORDER_SERVICE_URL: ${env:ORDER_SERVICE_URL}
+    DYNAMODB_WISHLISTS_TABLE: ${env:DYNAMODB_WISHLISTS_TABLE, 'natish_wishlists'}
+    DYNAMODB_REVIEWS_TABLE: ${env:DYNAMODB_REVIEWS_TABLE, 'natish_reviews'}
+    DYNAMODB_BRANDS_TABLE: ${env:DYNAMODB_BRANDS_TABLE, 'natish_brands'}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID, 'ap-south-2_AekUQ0VVq'}
+    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID, '2osrvmtu0c57dhvgr6ive13but'}
+    ORDER_SERVICE_URL: ${env:ORDER_SERVICE_URL, ''}
 
   iam:
     role:
@@ -32,12 +32,12 @@ provider:
             - dynamodb:Scan
             - dynamodb:Query
           Resource:
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_WISHLISTS_TABLE}
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_WISHLISTS_TABLE}/index/*
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_REVIEWS_TABLE}
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_REVIEWS_TABLE}/index/*
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_BRANDS_TABLE}
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_BRANDS_TABLE}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_WISHLISTS_TABLE, 'natish_wishlists'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_WISHLISTS_TABLE, 'natish_wishlists'}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_REVIEWS_TABLE, 'natish_reviews'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_REVIEWS_TABLE, 'natish_reviews'}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_BRANDS_TABLE, 'natish_brands'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_BRANDS_TABLE, 'natish_brands'}/index/*
 
 functions:
   app:
@@ -53,31 +53,3 @@ functions:
       - httpApi:
           path: /
           method: ANY
-resources:
-  Resources:
-    WishlistsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: natish_wishlists
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: userId
-            AttributeType: S
-          - AttributeName: productId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: userId
-            KeyType: HASH
-          - AttributeName: productId
-            KeyType: RANGE
-    ReviewsTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: natish_reviews
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: reviewId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: reviewId
-            KeyType: HASH

@@ -13,13 +13,13 @@ provider:
 
   environment:
     NODE_ENV: production
-    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
-    CART_TABLE_NAME: ${env:CART_TABLE_NAME}
-    PRODUCTS_TABLE_NAME: ${env:PRODUCTS_TABLE_NAME}
-    CART_SERVICE_URL: ${env:CART_SERVICE_URL}
-    INVENTORY_SERVICE_URL: ${env:INVENTORY_SERVICE_URL}
-    ORDER_PAYMENT_TIMEOUT_MINUTES: ${env:ORDER_PAYMENT_TIMEOUT_MINUTES}
-    ORDER_QUEUE_URL: ${env:ORDER_QUEUE_URL}
+    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME, 'natish_orders'}
+    CART_TABLE_NAME: ${env:CART_TABLE_NAME, 'natish_cart'}
+    PRODUCTS_TABLE_NAME: ${env:PRODUCTS_TABLE_NAME, 'natish_products'}
+    CART_SERVICE_URL: ${env:CART_SERVICE_URL, ''}
+    INVENTORY_SERVICE_URL: ${env:INVENTORY_SERVICE_URL, ''}
+    ORDER_PAYMENT_TIMEOUT_MINUTES: ${env:ORDER_PAYMENT_TIMEOUT_MINUTES, '15'}
+    ORDER_QUEUE_URL: ${env:ORDER_QUEUE_URL, ''}
 
   iam:
     role:
@@ -33,10 +33,10 @@ provider:
             - dynamodb:Scan
             - dynamodb:Query
           Resource:
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_TABLE_NAME}
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_TABLE_NAME}/index/*
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:CART_TABLE_NAME}
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:PRODUCTS_TABLE_NAME}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_orders'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_orders'}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:CART_TABLE_NAME, 'natish_cart'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:PRODUCTS_TABLE_NAME, 'natish_products'}
 
 functions:
   app:
@@ -52,36 +52,3 @@ functions:
       - httpApi:
           path: /
           method: ANY
-
-      - sqs:
-          arn: ${env:ORDER_QUEUE_ARN}
-          batchSize: 10
-          functionResponseType: ReportBatchItemFailures
-resources:
-  Resources:
-    OrdersTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: natish_orders
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: orderid
-            AttributeType: S
-        KeySchema:
-          - AttributeName: orderid
-            KeyType: HASH
-    OrderEventsTopic:
-      Type: AWS::SNS::Topic
-      Properties:
-        TopicName: natish-order-events
-    OrderPaymentQueueDLQ:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: natish-order-payment-events-dlq
-    OrderPaymentQueue:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: natish-order-payment-events
-        RedrivePolicy:
-          deadLetterTargetArn: !GetAtt OrderPaymentQueueDLQ.Arn
-          maxReceiveCount: 3

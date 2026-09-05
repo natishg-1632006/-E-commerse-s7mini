@@ -13,10 +13,10 @@ provider:
 
   environment:
     NODE_ENV: production
-    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME}
-    DYNAMODB_MOVEMENTS_TABLE_NAME: ${env:DYNAMODB_MOVEMENTS_TABLE_NAME}
-    PRODUCT_SERVICE_URL: ${env:PRODUCT_SERVICE_URL}
-    INVENTORY_QUEUE_URL: ${env:INVENTORY_QUEUE_URL}
+    DYNAMODB_TABLE_NAME: ${env:DYNAMODB_TABLE_NAME, 'natish_inventory_v2'}
+    DYNAMODB_MOVEMENTS_TABLE_NAME: ${env:DYNAMODB_MOVEMENTS_TABLE_NAME, 'natish_inventory_movements'}
+    PRODUCT_SERVICE_URL: ${env:PRODUCT_SERVICE_URL, ''}
+    INVENTORY_QUEUE_URL: ${env:INVENTORY_QUEUE_URL, ''}
 
   iam:
     role:
@@ -30,9 +30,8 @@ provider:
             - dynamodb:Scan
             - dynamodb:Query
           Resource:
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_TABLE_NAME}
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_TABLE_NAME}/index/*
-            - arn:aws:dynamodb:${env:AWS_REGION}:*:table/${env:DYNAMODB_MOVEMENTS_TABLE_NAME}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_inventory_v2'}
+            - arn:aws:dynamodb:${self:provider.region}:*:table/${env:DYNAMODB_TABLE_NAME, 'natish_inventory_v2'}/index/*
 
 functions:
   app:
@@ -48,32 +47,3 @@ functions:
       - httpApi:
           path: /
           method: ANY
-
-      - sqs:
-          arn: ${env:INVENTORY_QUEUE_ARN}
-          batchSize: 10
-          functionResponseType: ReportBatchItemFailures
-resources:
-  Resources:
-    InventoryTable:
-      Type: AWS::DynamoDB::Table
-      Properties:
-        TableName: natish_inventory_v2
-        BillingMode: PAY_PER_REQUEST
-        AttributeDefinitions:
-          - AttributeName: productId
-            AttributeType: S
-        KeySchema:
-          - AttributeName: productId
-            KeyType: HASH
-    InventoryQueueDLQ:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: natish-inventory-payment-events-dlq
-    InventoryQueue:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: natish-inventory-payment-events
-        RedrivePolicy:
-          deadLetterTargetArn: !GetAtt InventoryQueueDLQ.Arn
-          maxReceiveCount: 3

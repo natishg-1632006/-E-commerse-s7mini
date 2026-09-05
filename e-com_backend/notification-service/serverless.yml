@@ -13,13 +13,13 @@ provider:
 
   environment:
     NODE_ENV: production
-    SMTP_HOST: ${env:SMTP_HOST}
-    SMTP_PORT: ${env:SMTP_PORT}
-    SMTP_SECURE: ${env:SMTP_SECURE}
-    SMTP_USER: ${env:SMTP_USER}
-    SMTP_PASS: ${env:SMTP_PASS}
-    SMTP_FROM: ${env:SMTP_FROM}
-    NOTIFICATION_OWNER_EMAIL: ${env:NOTIFICATION_OWNER_EMAIL}
+    SMTP_HOST: ${env:SMTP_HOST, ''}
+    SMTP_PORT: ${env:SMTP_PORT, '587'}
+    SMTP_SECURE: ${env:SMTP_SECURE, 'false'}
+    SMTP_USER: ${env:SMTP_USER, ''}
+    SMTP_PASS: ${env:SMTP_PASS, ''}
+    SMTP_FROM: ${env:SMTP_FROM, ''}
+    NOTIFICATION_OWNER_EMAIL: ${env:NOTIFICATION_OWNER_EMAIL, ''}
 
 functions:
   app:
@@ -35,14 +35,3 @@ functions:
       - httpApi:
           path: /
           method: ANY
-
-      - sqs:
-          arn: ${env:NOTIFICATION_QUEUE_ARN}
-          batchSize: 10
-          functionResponseType: ReportBatchItemFailures
-resources:
-  Resources:
-    NotificationQueue:
-      Type: AWS::SQS::Queue
-      Properties:
-        QueueName: natish-notification-events
