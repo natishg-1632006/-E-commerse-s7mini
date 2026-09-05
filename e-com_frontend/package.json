@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-cloudfront": "^3.1127.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.1127.0",
+    "@aws-sdk/client-dynamodb": "^3.1127.0",
     "@aws-sdk/client-s3": "^3.1127.0",
     "@hookform/resolvers": "^5.4.0",
     "@reduxjs/toolkit": "^2.12.0",

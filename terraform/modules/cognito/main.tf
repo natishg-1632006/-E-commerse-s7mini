@@ -56,3 +56,16 @@ resource "aws_cognito_user_pool_client" "client" {
     "ALLOW_ADMIN_USER_PASSWORD_AUTH"
   ]
 }
+
+resource "aws_cognito_user_group" "admin_group" {
+  name         = "admin"
+  user_pool_id = aws_cognito_user_pool.user_pool.id
+  description  = "Admin group with full administrative access"
+}
+
+resource "aws_cognito_user_group" "user_group" {
+  name         = "user"
+  user_pool_id = aws_cognito_user_pool.user_pool.id
+  description  = "Standard user group for customers"
+}
+
